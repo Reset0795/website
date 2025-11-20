@@ -590,19 +590,22 @@
                 margin-right: 0;
                 margin-bottom: 20px; /* 减少底部margin */
                 padding: 0;
+                display: block !important; /* 移动端使用block，让项目自然垂直排列 */
+                position: relative !important;
             }
 
             .project-card {
-                width: auto !important; /* 移动端宽度自适应，根据视频比例 */
-                max-width: 100vw !important; /* 最大不超过屏幕宽度 */
-                position: relative !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important; /* 居中显示 */
+                width: 100vw !important; /* 移动端固定屏幕宽度 */
+                position: relative !important; /* 移动端使用relative，直接垂直排列 */
+                left: auto !important;
+                top: auto !important;
+                transform: none !important;
                 margin-left: 0 !important;
                 margin-right: 0 !important;
-                margin-bottom: 15px !important;
+                margin-bottom: 5px !important; /* 减少项目之间的间距 */
                 border: none !important; /* 移除所有边框 */
                 padding: 0 !important; /* 移除所有padding */
+                box-sizing: border-box !important;
             }
             
             .project-card.size-mini,
@@ -614,16 +617,18 @@
             .project-card.size-extra,
             .project-card.size-large,
             .project-card.size-super {
-                width: auto !important; /* 所有size在移动端都自适应 */
-                max-width: 100vw !important;
+                width: 100vw !important; /* 所有size在移动端都是屏幕宽度 */
             }
             
             .project-image {
                 height: auto !important; /* 移动端高度自适应 */
+                min-height: 200px !important; /* 确保有最小高度 */
                 padding-bottom: 0 !important;
-                width: auto !important; /* 宽度自适应 */
-                max-width: 100vw !important; /* 最大不超过屏幕宽度 */
-                margin: 0 auto !important; /* 居中 */
+                width: 100vw !important; /* 移动端固定屏幕宽度 */
+                margin: 0 !important;
+                max-width: none !important; /* 移除最大宽度限制 */
+                box-sizing: border-box !important;
+                position: relative !important; /* 确保绝对定位的子元素能正确定位 */
             }
             
             /* 移动端保持absolute定位，封面图覆盖视频，不拼接 */
@@ -1272,42 +1277,33 @@
                 return;
             }
             
-            // 移动端：根据视频宽高比决定是宽度优先还是高度优先
+            // 移动端：所有视频（横版和竖版）都宽度占满屏幕，高度自适应，无限制
             if (isMobile) {
                 const screenWidth = window.innerWidth;
-                const screenHeight = window.innerHeight;
                 
-                let containerWidth, containerHeight;
+                // 所有视频都使用屏幕宽度，高度根据宽高比计算，无限制
+                const containerWidth = screenWidth;
+                const containerHeight = containerWidth * aspectRatio;
                 
-                // 判断是竖版视频（高宽比>1）还是横版视频
-                if (aspectRatio > 1) {
-                    // 竖版视频：高度占满屏幕，宽度自适应
-                    containerHeight = screenHeight * 0.9; // 留一点边距
-                    containerWidth = containerHeight / aspectRatio;
-                } else {
-                    // 横版视频：宽度占满屏幕，高度自适应
-                    containerWidth = screenWidth;
-                    containerHeight = containerWidth * aspectRatio;
-                }
-                
-                // 设置容器宽度和高度
-                imageContainer.style.width = containerWidth + 'px';
-                imageContainer.style.height = containerHeight + 'px';
-                imageContainer.style.paddingBottom = '0';
+                // 强制设置容器宽度和高度，使用setProperty确保覆盖CSS
+                imageContainer.style.setProperty('width', containerWidth + 'px', 'important');
+                imageContainer.style.setProperty('height', containerHeight + 'px', 'important');
+                imageContainer.style.setProperty('padding-bottom', '0', 'important');
+                imageContainer.style.setProperty('max-width', 'none', 'important');
                 
                 // 移动端使用contain模式保持原始比例，视频和图片都是100%容器尺寸
                 const coverImage = imageContainer.querySelector('img.cover-image');
                 const previewVideo = imageContainer.querySelector('video.preview-video');
                 
                 if (coverImage) {
-                    coverImage.style.objectFit = 'contain';
-                    coverImage.style.width = '100%';
-                    coverImage.style.height = '100%';
+                    coverImage.style.setProperty('object-fit', 'contain', 'important');
+                    coverImage.style.setProperty('width', '100%', 'important');
+                    coverImage.style.setProperty('height', '100%', 'important');
                 }
                 if (previewVideo) {
-                    previewVideo.style.objectFit = 'contain';
-                    previewVideo.style.width = '100%';
-                    previewVideo.style.height = '100%';
+                    previewVideo.style.setProperty('object-fit', 'contain', 'important');
+                    previewVideo.style.setProperty('width', '100%', 'important');
+                    previewVideo.style.setProperty('height', '100%', 'important');
                 }
                 return;
             }
@@ -1391,7 +1387,7 @@
 
             const gridWidth = grid.offsetWidth;
             // 移动端使用更小的间距
-            const gap = gridWidth < 768 ? 15 : 70;
+            const gap = gridWidth < 768 ? 5 : 70;
             
             // 记录已放置项目的占用区域 [x, y, width, height]
             const placedItems = [];
@@ -1412,18 +1408,19 @@
                 // 窗口小时单列排布（所有卡片屏幕宽度）
                 const isSmallWindow = gridWidth < 768;
                 
-                // 根据size计算卡片宽度
-                let cardWidth;
+                // 移动端：直接使用flex布局，不需要复杂计算
                 if (isSmallWindow) {
-                    // 移动端：获取卡片实际宽度（已经根据视频比例设置）
-                    const imageContainer = card.querySelector('.project-image');
-                    if (imageContainer && imageContainer.offsetWidth > 0) {
-                        cardWidth = imageContainer.offsetWidth;
-                    } else {
-                        // 如果还没有渲染，使用屏幕宽度作为默认值
-                        cardWidth = window.innerWidth;
-                    }
-                } else if (size === 'super') {
+                    // 移动端不需要设置left和top，让flex自然排列
+                    card.style.left = 'auto';
+                    card.style.top = 'auto';
+                    card.style.width = window.innerWidth + 'px';
+                    // 不需要记录到placedItems，因为flex会自动排列
+                    return; // 移动端处理完毕，跳过后续逻辑
+                }
+                
+                // 根据size计算卡片宽度（桌面端）
+                let cardWidth;
+                if (size === 'super') {
                     cardWidth = gridWidth; // 100%宽度
                 } else if (size === 'large') {
                     cardWidth = (gridWidth - gap * 0.2) / 1.2; // 5/6宽度
