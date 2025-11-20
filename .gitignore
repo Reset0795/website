@@ -1,0 +1,8 @@
+# 不需要上传到 Git 的文件
+.DS_Store
+Thumbs.db
+*.log
+
+# 如果视频文件太大，可以忽略（使用外部存储）
+# videos/*.mp4
+

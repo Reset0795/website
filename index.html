@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400&family=Special+Elite&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #0a0a0a;
+            color: #ffffff;
+            font-weight: 400;
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #2a2a2a;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3a3a3a;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 左侧导航栏 */
+        .sidebar {
+            width: 280px;
+            background-color: #0a0a0a;
+            border-right: 1px solid #1a1a1a;
+            padding: 50px 30px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar h1 {
+            font-size: 50.96px; /* 39.2px * 1.3 */
+            margin-bottom: 60px;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+        }
+
+        .category-list {
+            list-style: none;
+        }
+
+        .category-item {
+            margin-bottom: 10px;
+        }
+
+        .category-link {
+            text-decoration: none;
+            color: #666666;
+            font-size: 29.12px; /* 22.4px * 1.3 */
+            display: inline-block;
+            padding: 8px 0;
+            transition: color 0.4s ease;
+            position: relative;
+            letter-spacing: 0.5px;
+        }
+
+        .category-link:hover {
+            color: #ffffff;
+            filter: blur(0px);
+            animation: blurEffect 0.6s ease-in-out;
+        }
+
+        @keyframes blurEffect {
+            0% {
+                filter: blur(0px);
+            }
+            50% {
+                filter: blur(3px);
+            }
+            100% {
+                filter: blur(0px);
+            }
+        }
+
+        .category-link.active {
+            color: #b19cd9;
+        }
+
+        /* 顶部装饰文字 */
+        .header-decoration {
+            position: fixed;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            text-align: center;
+        }
+
+        .header-decoration .main-title {
+            font-family: 'Special Elite', 'Courier New', monospace;
+            font-size: 25.92px;
+            color: #ffffff;
+            opacity: 0.9;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .header-decoration .subtitle {
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            color: #999999;
+            letter-spacing: 2px;
+            font-weight: 400;
+            text-transform: uppercase;
+        }
+
+        /* 主要内容区域 */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 150px 60px 50px 60px;
+        }
+
+        .page-title {
+            display: none;
+        }
+
+        /* 项目网格 - 瀑布流布局 */
+        .projects-grid {
+            position: relative;
+            margin-bottom: 80px;
+        }
+
+        .project-card {
+            background-color: #111111;
+            border-radius: 0;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.4s ease, opacity 0.4s ease;
+            border: 1px solid #1a1a1a;
+            position: absolute;
+            margin-bottom: 40px;
+        }
+
+        /* 不同尺寸的项目卡片 */
+        .project-card.size-mini {
+            width: calc((100% - 160px) / 5); /* 1/5宽度，最小尺寸 */
+        }
+
+        .project-card.size-tiny {
+            width: calc((100% - 120px) / 4); /* 1/4宽度 */
+        }
+
+        .project-card.size-small {
+            width: calc((100% - 80px) / 3); /* 1/3宽度 */
+        }
+
+        .project-card.size-regular {
+            width: calc((100% - 60px) / 2.5); /* 2/5宽度，介于small和medium之间 */
+        }
+
+        .project-card.size-big {
+            width: calc((100% - 40px) / 2); /* 1/2宽度 */
+        }
+
+        .project-card.size-medium {
+            width: calc(100% * 0.45); /* 45%宽度，介于regular和big之间 */
+        }
+
+        .project-card.size-extra {
+            width: calc((100% - 35px) / 1.5); /* 2/3宽度 */
+        }
+
+        .project-card.size-large {
+            width: calc((100% - 14px) / 1.2); /* 5/6宽度，介于extra和super之间 */
+        }
+
+        .project-card.size-super {
+            width: 100%; /* 全宽 */
+        }
+
+        .project-card:hover {
+            transform: scale(1.02);
+            opacity: 0.9;
+        }
+
+        .project-image {
+            width: 100%;
+            height: 0;
+            padding-bottom: 56.25%; /* 默认16:9比例，加载后会被实际比例覆盖 */
+            min-height: 200px; /* 最小高度 */
+            max-height: 800px; /* 最大高度 */
+            object-fit: cover;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333333;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .project-image img,
+        .project-image video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .project-image .cover-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 2;
+            transition: opacity 0.3s ease;
+        }
+
+        .project-image .cover-image[src=""] {
+            display: none;
+        }
+
+        .project-image .preview-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+
+        .project-card.has-video:hover .cover-image {
+            opacity: 0; /* 只有在有预览视频时才隐藏封面图 */
+        }
+
+        .project-info {
+            padding: 24px;
+            background-color: #0f0f0f;
+        }
+
+        .project-title {
+            font-size: 18px;
+            font-weight: 400;
+            margin-bottom: 12px;
+            color: #ffffff;
+            letter-spacing: 0.3px;
+        }
+
+        .project-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag {
+            background-color: transparent;
+            border: 1px solid #2a2a2a;
+            padding: 4px 14px;
+            border-radius: 12px;
+            font-size: 11px;
+            color: #888888;
+            letter-spacing: 0.5px;
+        }
+
+        /* 弹出层 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            animation: fadeIn 0.4s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            background-color: #111111;
+            border-radius: 0;
+            max-width: 1000px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            animation: slideUp 0.4s ease;
+            border: 1px solid #1a1a1a;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(40px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid #2a2a2a;
+            width: 40px;
+            height: 40px;
+            border-radius: 0;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .modal-close:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-color: #ffffff;
+        }
+
+        .modal-media-container {
+            width: 100%;
+            position: relative;
+            background: #000000;
+        }
+
+        .modal-image {
+            width: 100%;
+            height: 585px; /* 450px * 1.3 */
+            object-fit: contain;
+            background: #000000;
+            display: block;
+        }
+
+        .modal-video {
+            width: 100%;
+            height: 585px; /* 450px * 1.3 */
+            background: #000000;
+        }
+
+        .media-placeholder {
+            width: 100%;
+            height: 585px; /* 450px * 1.3 */
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333333;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+
+        /* 媒体轮播控制 */
+        .media-nav {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 5;
+        }
+
+        .media-nav-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .media-nav-dot.active {
+            background: #b19cd9; /* 浅紫色 */
+            width: 24px;
+            border-radius: 4px;
+        }
+
+        .media-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent; /* 移除背景 */
+            border: none; /* 移除外框 */
+            color: #ffffff;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 64px; /* 从 32px 增加到 64px（放大一倍） */
+            font-weight: 100; /* 细字体 */
+            font-family: 'Outfit', sans-serif; /* 使用 Outfit 字体 */
+            transition: all 0.3s ease;
+            z-index: 5;
+        }
+
+        .media-arrow:hover {
+            color: rgba(255, 255, 255, 0.8); /* 悬停时稍微变暗 */
+        }
+
+        .media-arrow.prev {
+            left: 20px;
+        }
+
+        .media-arrow.next {
+            right: 20px;
+        }
+
+        .media-arrow.hidden {
+            display: none;
+        }
+
+        .modal-body {
+            padding: 50px;
+        }
+
+        .modal-title {
+            font-size: 32px;
+            font-weight: 400;
+            margin-bottom: 24px;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+
+        .modal-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 35px;
+        }
+
+        .modal-tag {
+            background-color: transparent;
+            border: 1px solid #2a2a2a;
+            padding: 5.6px 18px;
+            border-radius: 16px;
+            font-size: 12px;
+            color: #888888;
+            letter-spacing: 0.5px;
+        }
+
+        .modal-description {
+            font-size: 15px;
+            line-height: 1.9;
+            color: #999999;
+            margin-bottom: 30px;
+            letter-spacing: 0.3px;
+        }
+
+        .modal-details {
+            border-top: 1px solid #1a1a1a;
+            padding-top: 30px;
+            margin-top: 30px;
+        }
+
+        .detail-item {
+            margin-bottom: 20px;
+        }
+
+        .detail-label {
+            font-weight: 400;
+            color: #666666;
+            margin-bottom: 8px;
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .detail-value {
+            color: #ffffff;
+            font-size: 15px;
+            letter-spacing: 0.3px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid #1a1a1a;
+                padding: 30px 20px;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 150px 20px 40px 20px;
+            }
+
+            .project-card {
+                width: 100% !important;
+                position: relative !important;
+            }
+            
+            .project-card.size-mini,
+            .project-card.size-tiny,
+            .project-card.size-small,
+            .project-card.size-regular,
+            .project-card.size-big,
+            .project-card.size-medium,
+            .project-card.size-extra,
+            .project-card.size-large,
+            .project-card.size-super {
+                width: 100% !important;
+            }
+            
+            .project-image {
+                height: 300px !important; /* 移动端使用固定高度 */
+                padding-bottom: 0 !important;
+            }
+
+            .modal-content {
+                margin: 20px;
+                max-width: calc(100vw - 40px);
+            }
+
+            .modal-body {
+                padding: 30px 25px;
+            }
+
+            .modal-close {
+                top: 20px;
+                right: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部装饰文字 -->
+    <div class="header-decoration">
+        <div class="main-title">FuWei</div>
+        <div class="subtitle">Multimedia Designer</div>
+    </div>
+
+    <div class="container">
+        <!-- 左侧导航栏 -->
+        <aside class="sidebar">
+            <h1>Portfolio</h1>
+            <nav>
+                <ul class="category-list">
+                    <li class="category-item">
+                        <a href="#all" class="category-link active" data-category="all">All</a>
+                    </li>
+                    <li class="category-item">
+                        <a href="#3d-video" class="category-link" data-category="3d-video">3D Video</a>
+                    </li>
+                    <li class="category-item">
+                        <a href="#2d-motion" class="category-link" data-category="2d-motion">2D Motion</a>
+                    </li>
+                    <li class="category-item">
+                        <a href="#aigc" class="category-link" data-category="aigc">AIGC</a>
+                    </li>
+                    <li class="category-item">
+                        <a href="#other" class="category-link" data-category="other">Other</a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- 主要内容区域 -->
+        <main class="main-content">
+            <h2 class="page-title">Selected Works</h2>
+            
+            <!-- 项目网格 -->
+            <div class="projects-grid" id="projectsGrid">
+                <!-- 项目将通过JavaScript动态生成 -->
+            </div>
+        </main>
+    </div>
+
+    <!-- 弹出层 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">&times;</button>
+            <div class="modal-media-container" id="modalMediaContainer">
+                <div class="media-placeholder">Project Media</div>
+                <div class="media-arrow prev hidden" id="mediaPrev">‹</div>
+                <div class="media-arrow next hidden" id="mediaNext">›</div>
+                <div class="media-nav" id="mediaNav"></div>
+            </div>
+            <div class="modal-body">
+                <h3 class="modal-title" id="modalTitle">Project Title</h3>
+                <div class="modal-tags" id="modalTags"></div>
+                <div class="modal-description" id="modalDescription">Project Description</div>
+                <div class="modal-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Time</div>
+                        <div class="detail-value" id="modalTime">2024</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Tools</div>
+                        <div class="detail-value" id="modalTools">Photoshop, Illustrator</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 示例项目数据
+        const projects = [
+            {
+                id: 1,
+                title: 'Sigma 运动app功能宣传片',
+                category: '3d-video',
+                tags: ['3D Animation', 'Cinema 4D', '产品长片'],
+                cover: 'images/sigma_cover.png',  // 封面图（必需）
+                video: { type: 'video', src: 'videos/sigma_video.mp4' },  // 主视频（必需）
+                size: 'medium',  // 项目尺寸: 'mini', 'tiny', 'small', 'regular', 'medium', 'big', 'extra', 'large', 'super'
+                // 额外媒体（可选）- 详情页中的其他图片和视频
+                media: [],
+                description: '该项目是为Sigma运动app制作功能宣传片，通过3D动画展示产品的各项功能，包括运动记录、AI伙伴、社区分享卡、数据同步等。除视频开头的实拍镜头外，其他部分均由本人独立完成，包括从静态设定到动态制作，再到后期渲染与剪辑的全流程工作。',
+                time: 'July 2025',
+                tools: 'Cinema 4D, Octane Render, After Effects'
+            },
+            {
+                id: 2,
+                title: 'about04 《想开一家买手店》AtoZ科普向动画',
+                category: '2d-motion',
+                tags: ['Motion Graphics', '2D', '三渲二'],
+                cover: 'images/about4_cover1.png',  // 封面图路径
+                video: { type: 'video', src: 'videos/about4_video1.mp4' },  // 视频路径
+                size: 'big',  // 项目尺寸
+                media: [],  // 额外媒体（可选）
+                description: '该项目是为about04期《想开一家买手店》制作的开店步骤AtoZ科普向动画，通过2D动画展示开一家买手店的相关知识，风格上以扁平化为主，通过简洁的线条和色块来展示，并在2D动态中穿插了部分三渲二效果镜头。该动画从静帧设定到动态制作均由本人全流程独立完成。',
+                time: 'June 2024',
+                tools: 'After Effects, Illustrator'
+            },
+            {
+                id: 3,
+                title: 'staffroom 卫衣实景合成创意短片',
+                category: '3d-video',
+                tags: ['3D Animation', 'Cinema 4D', '实景合成', '产品短片'],
+                cover: 'images/staffroom_cover.png',
+                video: { type: 'video', src: 'videos/staffroom_video.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [
+                    { type: 'image', src: 'images/staffroom_image1.png' },
+                    { type: 'video', src: 'videos/staffroom_video6.mp4' },
+                    { type: 'video', src: 'videos/staffroom_video7.mp4' }
+                ],
+                description: '该项目是为staffroom新系列卫衣制作的一支创意短片，通过实景合成的方式让巨物卫衣在现实中出现，传达品牌时髦打工人的理念。该短片从创意到实地拍摄再到cg制作合成均由本人全流程独立完成。',
+                time: 'February 2024',
+                tools: 'Cinema 4D, Octane Render, After Effects'
+            },
+            {
+                id: 4,
+                title: 'about03 《一出门就心情好》预热短片',
+                category: '3d-video',
+                tags: ['3D Animation', '动力学模拟', '概念短片'],
+                cover: 'images/about3_cover1.png',
+                video: { type: 'video', src: 'videos/about3_video1.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为about03期《一出门就心情好》制作的一支预热短片，通过3D动画展示杂志本期的主题与户外、运动有关，动画部分以动力学模拟为主。该动画制作阶段由本人独立完成。',
+                time: 'June 2023',
+                tools: 'Cinema 4D, Octane Render, After Effects'
+            },
+            {
+                id: 5,
+                title: '生活服务大会动态视频',
+                category: '2d-motion',
+                tags: ['Motion Graphics', '2D', '商业大会'],
+                cover: 'images/life_service_cover.png',
+                video: { type: 'video', src: 'videos/life_service_video.mp4' },
+                size: 'medium',  // 项目尺寸
+                media: [],
+                description: '该项目是为线下生活服务大会制作的活动内宣动画。动态制作由本人独立完成。',
+                time: 'August 2024',
+                tools: 'After Effects, Illustrator'
+            },
+            {
+                id: 6,
+                title: 'about03 《一出门就心情好》预热短片',
+                category: '3d-video',
+                tags: ['3D Animation', '动力学模拟', '概念短片'],
+                cover: 'images/about3_cover2.png',
+                video: { type: 'video', src: 'videos/about3_video2.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为about03期《一出门就心情好》制作的一支预热短片，通过3D动画展示杂志本期的主题与户外、运动有关，动画部分以动力学模拟为主。该动画制作阶段由本人独立完成。',
+                time: 'June 2023',
+                tools: 'Cinema 4D, Octane Render, After Effects'
+            },
+            {
+                id: 7,
+                title: '设计周倒计时实景合成短片',
+                category: '3d-video',
+                tags: ['3D Animation', 'Cinema 4D', '实景合成'],
+                cover: 'images/design_week_cover.png',
+                video: { type: 'video', src: 'videos/design_week_video.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为设计周制作的一支倒计时实景合成短片，以线下活动的召开地点思南公馆为取景地进行拍摄，并进行cg制作合成，为活动进行预热宣传。该短片从创意到实地拍摄再到cg制作合成均由本人全流程独立完成。',
+                time: 'September 2024',
+                tools: 'Cinema 4D, Octane Render, After Effects'
+            },
+            {
+                id: 8,
+                title: 'about04 《想开一家买手店》主宣传片',
+                category: '3d-video',
+                tags: ['3D Animation', '三渲二', '概念长片'],
+                cover: 'images/about4_cover2.png',
+                video: { type: 'video', src: 'videos/about4_video2.mp4' },
+                size: 'medium',  // 项目尺寸
+                media: [],
+                description: '该项目是为about04期《想开一家买手店》制作的主宣传片，通过3D动画呈现买手店开门营业前的一系列准备工作，动画部分采用三渲二的风格渲染。该宣传片的美术部分由本人完成。',
+                time: 'June 2024',
+                tools: 'Cinema 4D, After Effects'
+            },
+            {
+                id: 9,
+                title: 'LaVie 镜子支架创意短片',
+                category: '3d-video',
+                tags: ['3D Animation', 'Cinema 4D', '产品动画'],
+                cover: 'images/mirror_cover.png',
+                video: { type: 'video', src: 'videos/mirror_video.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为LaVie镜子支架制作的一支创意短片，通过3D动画展示镜子支架的创意设计和产品内涵，传达“不要沮丧，你是最酷的”的产品slogan。该短片从创意到静态设定再到动态制作由本人全流程完成。',
+                time: 'August 2023',
+                tools: 'Cinema 4D, Octane Render, After Effects'
+            },
+            {
+                id: 10,
+                title: 'LaVie 蛇年礼盒产品短片',
+                category: '3d-video',
+                tags: ['3D Animation', 'Cinema 4D', '产品动画'],
+                cover: 'images/snake_year_cover1.png',
+                video: { type: 'video', src: 'videos/snake_year_video1.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为LaVie蛇年礼盒制作的一支创意短片，通过3D动画展示礼盒的内部产品，在保持品牌可爱调性的同时展现新年的喜庆氛围。该短片从创意到静态设定再到动态制作由本人全流程独立完成。',
+                time: 'January 2025',
+                tools: 'Cinema 4D, Octane Render, After Effects'
+            },
+            {
+                id: 11,
+                title: 'LaVie 蛇年礼盒创意短片',
+                category: '3d-video',
+                tags: ['3D Animation', 'Cinema 4D', '产品动画'],
+                cover: 'images/snake_year_cover2.png',
+                video: { type: 'video', src: 'videos/snake_year_video2.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为LaVie蛇年礼盒制作的一支创意短片，通过3D动画展示礼盒的主要产品——蛇年毛绒玩偶，在保持品牌可爱调性的同时展现新年的喜庆氛围。该短片从创意到静态设定再到动态制作由本人全流程独立完成。',
+                time: 'January 2025',
+                tools: 'Cinema 4D, Octane Render, After Effects'
+            },
+            {
+                id: 12,
+                title: 'staffroom 包包实景合成创意短片',
+                category: '3d-video',
+                tags: ['3D Animation', 'Cinema 4D', '实景合成', '产品短片'],
+                cover: 'images/staffroom_cover2.png',
+                video: { type: 'video', src: 'videos/staffroom_video2.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [
+                    { type: 'video', src: 'videos/staffroom_video3.mp4' },
+                    { type: 'video', src: 'videos/staffroom_video4.mp4' },
+                    { type: 'video', src: 'videos/staffroom_video5.mp4' }
+                ],
+                description: '该项目是为staffroom新系列包包制作的一支创意短片，通过实景合成的方式让巨物包包在现实中出现，传达品牌时髦打工人的理念。该短片从创意到实地拍摄再到cg制作合成均由本人全流程独立完成。',
+                time: 'December 2023',
+                tools: 'Cinema 4D, Octane Render, After Effects'
+            },
+            {
+                id: 13,
+                title: 'about04 《想开一家买手店》预热短片',
+                category: '3d-video',
+                tags: ['3D Animation', '动力学模拟', '概念短片'],
+                cover: 'images/about4_cover3.png',
+                video: { type: 'video', src: 'videos/about4_video3.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为about04期《想开一家买手店》制作的一支预热短片，通过3D动画展示杂志本期的主题与买手店有关，动画部分以动力学模拟为主。从画面设定到动态制作均由本人独立完成。',
+                time: 'May 2024',
+                tools: 'Cinema 4D, Octane Render, After Effects'
+            },
+            {
+                id: 14,
+                title: 'Link商业大会开场视频',
+                category: '2d-motion',
+                tags: ['Motion Graphics', '2D', '商业大会'],
+                cover: 'images/link_cover.png',
+                video: { type: 'video', src: 'videos/link_video.mp4' },
+                size: 'super',  // 项目尺寸
+                media: [
+                    { type: 'video', src: 'videos/link_video2.mp4' }
+                ],
+                description: '该项目是为Link商业大会制作的开场视频，通过2d动画诠释点、呼吸、直播的概念，展示Link大会的商业理念和品牌感。该视频从静态设定再到动态制作均由本人全流程独立完成。',
+                time: 'August 2024',
+                tools: 'After Effects, Illustrator'
+            },
+            {
+                id: 15,
+                title: 'Lavie AI对联创意视频',
+                category: 'aigc',
+                tags: ['AIGC', 'Midjourney', '营销视频'],
+                cover: 'images/ai_cover1.png',
+                video: { type: 'video', src: 'videos/ai_video1.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为Lavie蛇年礼盒中的对联制作的AI视频，通过Midjourney生图加剪辑的方式营造千门万户曈曈日的新年氛围，同时也能呈现产品的使用场景。该视频从创意到制作由本人全流程独立完成。',
+                time: 'January 2025',
+                tools: 'After Effects, Midjourney'
+            },
+            {
+                id: 16,
+                title: 'Lavie AI马年礼盒创意视频',
+                category: 'aigc',
+                tags: ['AIGC', '即梦生成', '营销视频'],
+                cover: 'images/ai_cover2.png',
+                video: { type: 'video', src: 'videos/ai_video2.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为Lavie马年礼盒制作的AI视频，通过即梦智能多帧生成的方式展现马年礼盒的主要产品，通过AI制作的方式极大地缩短了制作时间。该视频从创意到静态设定再到AI制作均由本人全流程完成。',
+                time: 'November 2025',
+                tools: 'After Effects, 即梦, Cinema 4D'
+            },
+            {
+                id: 17,
+                title: 'about06 AI书中生花创意视频',
+                category: 'aigc',
+                tags: ['AIGC', '可灵生成', '营销视频'],
+                cover: 'images/ai_cover3.png',
+                video: { type: 'video', src: 'videos/ai_video3.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为about06期《去植物园逛逛吧》制作的AI视频，通过可灵首尾帧生成的方式展现翻书，书中生成珍稀花朵的动态效果，通过AI制作的方式极大地缩短了制作时间。该视频从创意到静态设定再到AI制作均由本人全流程完成。',
+                time: 'February 2025',
+                tools: '可灵, LibLib, After Effects'
+            },
+            {
+                id: 18,
+                title: 'about06 AI植物园场景创意视频',
+                category: 'aigc',
+                tags: ['AIGC', '可灵生成', '营销视频'],
+                cover: 'images/ai_cover4.png',
+                video: { type: 'video', src: 'videos/ai_video4.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [
+                    { type: 'video', src: 'videos/ai_video5.mp4' },
+                    { type: 'video', src: 'videos/ai_video6.mp4' }
+                ],
+                description: '该项目是为about06期《去植物园逛逛吧》制作的AI视频，通过LibLib和可灵结合的方式生成了许多植物园场景视频，通过AI制作的方式极大地缩短了制作时间。该视频从创意到静态设定再到AI制作均由本人全流程完成。',
+                time: 'February 2025',
+                tools: '可灵, LibLib, After Effects'
+            },
+            {
+                id: 19,
+                title: '快消行业cny大会开场秀',
+                category: '2d-motion',
+                tags: ['Motion Graphics', '2D', '商业大会'],
+                cover: 'images/cny_cover.png',
+                video: { type: 'video', src: 'videos/cny_video.mp4' },
+                size: 'large',  // 项目尺寸
+                media: [],
+                description: '该项目是为快消行业cny大会制作的开场秀，通过炮竹、饺子、游龙等图形变化营造新年氛围。本人参与了从创意到动态制作的全部环节。',
+                time: 'November 2023',
+                tools: 'After Effects, Illustrator'
+            },
+            {
+                id: 20,
+                title: 'LaVie 雨伞创意短片',
+                category: '3d-video',
+                tags: ['3D Animation', 'Cinema 4D', '产品动画'],
+                cover: 'images/umbrella_cover.png',
+                video: { type: 'video', src: 'videos/umbrella_video.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为LaVie雨伞制作的一支创意短片，通过3D动画展示雨伞的创意设计和品牌元素，展现趣味可爱的品牌调性。该短片从创意到静态设定再到动态制作均由本人全流程独立完成。',
+                time: 'July 2024',
+                tools: 'Cinema 4D, Octane Render, After Effects'
+            },
+            {
+                id: 21,
+                title: 'about05 TD创意概念视频',
+                category: 'other',
+                tags: ['音画互动', 'touchdesigner', '概念短片'],
+                cover: 'images/td_cover1.png',
+                video: { type: 'video', src: 'videos/td_video1.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为about05期《还好我喜欢听播客》制作的TD创意概念视频，通过touchdesigner的音画互动效果展现到处都是声音，到处都是播客的素材这一概念。该视频从创意到TD制作均由本人全流程独立完成。',
+                time: 'October 2024',
+                tools: 'TouchDesigner, After Effects'
+            },
+            {
+                id: 22,
+                title: 'about05 TD创意概念视频',
+                category: 'other',
+                tags: ['音画互动', 'touchdesigner', '概念短片'],
+                cover: 'images/td_cover2.png',
+                video: { type: 'video', src: 'videos/td_video2.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为about05期《还好我喜欢听播客》制作的TD创意概念视频，通过touchdesigner的音画互动效果展现到处都是声音，到处都是播客的素材这一概念。该视频从创意到TD制作均由本人全流程独立完成。',
+                time: 'October 2024',
+                tools: 'TouchDesigner, After Effects'
+            },
+            {
+                id: 23,
+                title: 'about07 AI创意编程动态短片',
+                category: 'aigc',
+                tags: ['AIGC', 'AI编程', '概念短片'],
+                cover: 'images/ai_cover7.png',
+                video: { type: 'video', src: 'videos/ai_video7.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为about07期《给明天的一句话》制作的AI视频，结合多个AI编程工具，以创意编程的方式完成了具有独特调性的概念视频。该视频从创意到AI编程均由本人全流程完成。',
+                time: 'March 2025',
+                tools: 'cursor, Gemini, GPT-4o'
+            },
+            {
+                id: 24,
+                title: 'IP营销体验大会开场秀',
+                category: '2d-motion',
+                tags: ['Motion Graphics', '2D', '商业大会'],
+                cover: 'images/ip_cover.png',
+                video: { type: 'video', src: 'videos/ip_video.mp4' },
+                size: 'medium',  // 项目尺寸
+                media: [],
+                description: '该项目是为IP营销体验大会制作的开场秀，通过2d动画诠释IP营销的独特魅力，展示IP营销的商业理念和品牌感。本人参与了50%动态制作环节。',
+                time: 'March 2024',
+                tools: 'After Effects, Illustrator, Premiere Pro'
+            },
+            {
+                id: 25,
+                title: '小红书十周年站内动态H5页面',
+                category: '2d-motion',
+                tags: ['Motion Graphics', '2D', 'H5页面'],
+                cover: 'images/h5_cover.png',
+                video: { type: 'video', src: 'videos/h5_video.mp4' },
+                size: 'medium',  // 项目尺寸
+                media: [],
+                description: '该项目是为小红书十周年制作的站内动态H5页面，本人参与了全部动态制作环节。',
+                time: 'August 2023',
+                tools: 'After Effects, Illustrator'
+            },
+            {
+                id: 26,
+                title: '生活服务大会动态视频',
+                category: '2d-motion',
+                tags: ['Motion Graphics', '2D', '商业大会'],
+                cover: 'images/life_service_cover2.png',
+                video: { type: 'video', src: 'videos/life_service_video2.mp4' },
+                size: 'super',  // 项目尺寸
+                media: [
+                    { type: 'video', src: 'videos/life_service_video3.mp4' }
+                ],
+                description: '该项目是为线下生活服务大会制作的大会大屏循环动画、嘉宾上场动画。动态制作由本人独立完成。',
+                time: 'August 2024',
+                tools: 'After Effects, Illustrator'
+            },
+            {
+                id: 27,
+                title: 'about07 AI地铁站预热视频',
+                category: 'aigc',
+                tags: ['AIGC', '可灵生成', '营销视频'],
+                cover: 'images/ai_cover8.png',
+                video: { type: 'video', src: 'videos/ai_video8.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为about07期《给明天的一句话》制作的AI视频，通过AI生成的方式创造金句的载体，让新书上线的信息出现在常见的地铁场景中。该视频从创意到AI生成再到后期AE文字动态合成均由本人全流程完成。',
+                time: 'June 2025',
+                tools: '可灵, LibLib, After Effects'
+            },
+            {
+                id: 28,
+                title: 'about07 AI书本预热视频',
+                category: 'aigc',
+                tags: ['AIGC', '可灵生成', '营销视频'],
+                cover: 'images/ai_cover9.png',
+                video: { type: 'video', src: 'videos/ai_video9.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为about07期《给明天的一句话》制作的AI视频，通过AI生成的方式创造书本在不同场景下的动态效果，让新书上线的信息出现日常生活的各个角落。该视频从创意到AI生成再到后期AE文字动态合成均由本人全流程完成。',
+                time: 'June 2025',
+                tools: '可灵, LibLib, After Effects'
+            },
+            {
+                id: 29,
+                title: 'LaVie 雨伞创意短片',
+                category: '3d-video',
+                tags: ['3D Animation', 'Cinema 4D', '产品动画'],
+                cover: 'images/umbrella_cover.png',
+                video: { type: 'video', src: 'videos/umbrella_video.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为LaVie雨伞制作的一支创意短片，通过3D动画展示雨伞的创意设计和品牌元素，展现趣味可爱的品牌调性。该短片从创意到静态设定再到动态制作均由本人全流程独立完成。',
+                time: 'July 2024',
+                tools: 'Cinema 4D, Octane Render, After Effects'
+            },
+            {
+                id: 30,
+                title: 'about04 新书上线实景短片',
+                category: 'other',
+                tags: ['2D实景合成', '概念短片'],
+                cover: 'images/about4_cover4.png',
+                video: { type: 'video', src: 'videos/about4_video4.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为about04期《想开一家买手店》制作的预热短片，通过拍摄实景，进行2D实景合成的方式展现新书上线的信息。该视频从创意到实地拍摄再到2D实景合成均由本人全流程完成。',
+                time: 'May 2024',
+                tools: 'After Effects, Premiere Pro'
+            },
+            {
+                id: 31,
+                title: 'about04 新书上线实景短片',
+                category: 'other',
+                tags: ['2D实景合成', '概念短片'],
+                cover: 'images/about4_cover5.png',
+                video: { type: 'video', src: 'videos/about4_video5.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为about04期《想开一家买手店》制作的预热短片，通过拍摄实景，进行2D实景合成的方式展现新书上线的信息。该视频从创意到实地拍摄再到2D实景合成均由本人全流程完成。',
+                time: 'May 2024',
+                tools: 'After Effects, Premiere Pro'
+            },
+            {
+                id: 32,
+                title: 'LaVie 快闪活动预告片',
+                category: '3d-video',
+                tags: ['3D Animation', 'Cinema 4D', '营销视频'],
+                cover: 'images/pop_cover.png',
+                video: { type: 'video', src: 'videos/pop_video.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为LaVie快闪活动制作的一支预告片，通过3D动画展示快闪活动的信息和展品内容，展现品牌调性。该短片从创意到静态设定再到动态制作均由本人全流程独立完成。',
+                time: 'March 2023',
+                tools: 'Cinema 4D, Octane Render, After Effects'
+            },
+            {
+                id: 33,
+                title: 'staffroom cd概念片',
+                category: '3d-video',
+                tags: ['3D Animation', 'Cinema 4D', '概念短片'],
+                cover: 'images/cd_cover.png',
+                video: { type: 'video', src: 'videos/cd_video.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [],
+                description: '该项目是为staffroom制作的一支概念片，通过3D动画展示cd的创意设计和品牌元素，展现品牌调性。该短片从创意到静态设定再到动态制作均由本人全流程独立完成。',
+                time: 'July 2023',
+                tools: 'Cinema 4D, Octane Render, After Effects'
+            },
+            {
+                id: 34,
+                title: '溜溜生活节 3d动态海报',
+                category: '3d-video',
+                tags: ['3D Animation', '角色动画', '动态海报'],
+                cover: 'images/ll_cover.png',
+                video: { type: 'video', src: 'videos/ll_video.mp4' },
+                size: 'tiny',  // 项目尺寸
+                media: [
+                    { type: 'video', src: 'videos/ll_video2.mp4' }
+                ],
+                description: '该项目是为溜溜生活节制作的3d动态海报，通过3D角色动画展示溜溜生活节的三个主题场景。该海报从静态设定再到动态制作均由本人独立完成。',
+                time: 'August 2023',
+                tools: 'Cinema 4D, Octane Render, After Effects'
+            },
+            {
+                id: 35,
+                title: 'will大会开场视频',
+                category: '2d-motion',
+                tags: ['Motion Graphics', '2D', '商业大会'],
+                cover: 'images/will_cover.png',
+                video: { type: 'video', src: 'videos/will_video.mp4' },
+                size: 'super',  // 项目尺寸
+                media: [
+                    { type: 'image', src: 'images/will_image1.png' },
+                    { type: 'image', src: 'images/will_image2.png' },
+                    { type: 'image', src: 'images/will_image3.png' }
+                ],
+                description: '该项目是为will大会制作的开场视频，通过各种类型的2d动画演绎will字母，打造will超级符号。该视频从动态创意到动态制作均由本人全流程独立完成。',
+                time: 'December 2023',
+                tools: 'After Effects, Illustrator'
+            },
+            {
+                id: 36,
+                title: '小红书 龙年手办模型',
+                category: 'other',
+                tags: ['IP手办', 'Cinema 4D'],
+                cover: 'images/shu_image.png',
+                video: { type: 'image', src: 'images/shu_image.png' },
+                size: 'medium',  // 项目尺寸
+                media: [],
+                description: '该项目是为小红书制作可用于生成制作的3d手办模型。',
+                time: 'October 2023',
+                tools: 'Cinema 4D, Octane Render'
+            },
+            {
+                id: 37,
+                title: '小红书咖啡节 物料模型展示图',
+                category: 'other',
+                tags: ['物料图', 'Cinema 4D'],
+                cover: 'images/coffee_image.png',
+                video: { type: 'image', src: 'images/coffee_image.png' },
+                size: 'medium',  // 项目尺寸
+                media: [
+                    { type: 'image', src: 'images/coffee_image1.png' }
+                ],
+                description: '该项目是为小红书咖啡节制作的物料模型展示图。',
+                time: 'October 2023',
+                tools: 'Cinema 4D, Octane Render'
+            },
+
+        ];
+
+        // 计算并设置合理的高度（带限制）
+        function setImageContainerHeight(imageContainer, aspectRatio) {
+            if (!imageContainer) return;
+            
+            // 尝试获取容器宽度，如果还没有渲染完成，等待一下
+            let containerWidth = imageContainer.offsetWidth;
+            if (!containerWidth) {
+                const card = imageContainer.closest('.project-card');
+                if (card) {
+                    containerWidth = card.offsetWidth;
+                }
+            }
+            
+            // 如果还是获取不到，使用默认值或延迟执行
+            if (!containerWidth) {
+                setTimeout(() => setImageContainerHeight(imageContainer, aspectRatio), 100);
+                return;
+            }
+            
+            // 计算实际高度（保持原始比例）
+            let calculatedHeight = containerWidth * aspectRatio;
+            
+            // 限制高度范围（最小200px，最大800px）
+            const minHeight = 200;
+            const maxHeight = 800;
+            
+            // 判断是否需要使用contain模式来保持原比例
+            const needsContain = calculatedHeight > maxHeight;
+            
+            // 如果高度超过最大限制，使用contain模式并限制高度
+            if (calculatedHeight > maxHeight) {
+                calculatedHeight = maxHeight;
+            } else if (calculatedHeight < minHeight) {
+                calculatedHeight = minHeight;
+            }
+            
+            // 使用固定高度，保持原始宽高比
+            imageContainer.style.height = calculatedHeight + 'px';
+            imageContainer.style.paddingBottom = '0';
+            
+            // 始终使用contain模式来保持原始比例，不裁剪
+            const coverImage = imageContainer.querySelector('img.cover-image');
+            const previewVideo = imageContainer.querySelector('video.preview-video');
+            
+            if (coverImage) {
+                coverImage.style.objectFit = 'contain';
+            }
+            if (previewVideo) {
+                previewVideo.style.objectFit = 'contain';
+            }
+        }
+
+        // 更新图片宽高比（带高度限制）
+        function updateImageAspectRatio(img) {
+            if (!img || !img.naturalWidth || !img.naturalHeight) return;
+            
+            const imageContainer = img.closest('.project-image');
+            if (!imageContainer) return;
+            
+            // 计算实际宽高比
+            const aspectRatio = img.naturalHeight / img.naturalWidth;
+            setImageContainerHeight(imageContainer, aspectRatio);
+            
+            // 重新布局
+            setTimeout(() => layoutMasonry(), 50);
+        }
+
+        // 更新视频宽高比（带高度限制）
+        function updateVideoAspectRatio(video) {
+            if (!video || !video.videoWidth || !video.videoHeight) return;
+            
+            const imageContainer = video.closest('.project-image');
+            if (!imageContainer) return;
+            
+            // 计算实际宽高比
+            const aspectRatio = video.videoHeight / video.videoWidth;
+            setImageContainerHeight(imageContainer, aspectRatio);
+            
+            // 重新布局
+            setTimeout(() => layoutMasonry(), 50);
+        }
+
+        // 灵活的瀑布流布局函数（不固定列数，根据项目比例和size灵活排布）
+        let isLayouting = false;
+        function layoutMasonry() {
+            const grid = document.getElementById('projectsGrid');
+            const cards = grid.querySelectorAll('.project-card');
+            if (cards.length === 0) {
+                grid.style.height = 'auto';
+                return;
+            }
+
+            // 防止重复布局
+            if (isLayouting) return;
+            isLayouting = true;
+
+            const gridWidth = grid.offsetWidth;
+            const gap = 70;
+            
+            // 记录已放置项目的占用区域 [x, y, width, height]
+            const placedItems = [];
+            
+            // 为每个卡片计算位置
+            cards.forEach((card) => {
+                // 获取卡片尺寸
+                const size = card.classList.contains('size-super') ? 'super' :
+                            card.classList.contains('size-large') ? 'large' :
+                            card.classList.contains('size-extra') ? 'extra' :
+                            card.classList.contains('size-medium') ? 'medium' :
+                            card.classList.contains('size-big') ? 'big' :
+                            card.classList.contains('size-regular') ? 'regular' :
+                            card.classList.contains('size-small') ? 'small' :
+                            card.classList.contains('size-tiny') ? 'tiny' :
+                            card.classList.contains('size-mini') ? 'mini' : 'small';
+                
+                // 窗口小时单列排布（所有卡片100%宽度）
+                const isSmallWindow = gridWidth < 768;
+                
+                // 根据size计算卡片宽度
+                let cardWidth;
+                if (isSmallWindow) {
+                    // 窗口小时，所有卡片单列排布
+                    cardWidth = gridWidth;
+                } else if (size === 'super') {
+                    cardWidth = gridWidth; // 100%宽度
+                } else if (size === 'large') {
+                    cardWidth = (gridWidth - gap * 0.2) / 1.2; // 5/6宽度
+                } else if (size === 'extra') {
+                    cardWidth = (gridWidth - gap * 0.5) / 1.5; // 2/3宽度
+                } else if (size === 'big') {
+                    cardWidth = (gridWidth - gap) / 2; // 1/2宽度
+                } else if (size === 'medium') {
+                    cardWidth = gridWidth * 0.45; // 45%宽度
+                } else if (size === 'regular') {
+                    cardWidth = (gridWidth - gap * 1.5) / 2.5; // 2/5宽度
+                } else if (size === 'small') {
+                    cardWidth = (gridWidth - gap * 2) / 3;
+                } else if (size === 'tiny') {
+                    cardWidth = (gridWidth - gap * 3) / 4;
+                } else {
+                    // mini: 使用1/5宽度
+                    cardWidth = (gridWidth - gap * 4) / 5;
+                }
+                
+                // 获取卡片实际高度
+                const cardHeight = card.offsetHeight || card.scrollHeight;
+                
+                // 找到可以放置该卡片的最佳位置
+                let bestX = 0;
+                let bestY = 0;
+                let minY = Infinity;
+                
+                // 生成候选x位置（考虑对齐和间距）
+                const candidateXs = [];
+                
+                // 对于mini，尝试对齐到1/5网格位置
+                if (size === 'mini') {
+                    const miniWidth = (gridWidth - gap * 4) / 5;
+                    candidateXs.push(0, miniWidth + gap, (miniWidth + gap) * 2, (miniWidth + gap) * 3, (miniWidth + gap) * 4);
+                }
+                // 对于tiny，尝试对齐到1/4网格位置
+                else if (size === 'tiny') {
+                    const tinyWidth = (gridWidth - gap * 3) / 4;
+                    candidateXs.push(0, tinyWidth + gap, (tinyWidth + gap) * 2, (tinyWidth + gap) * 3);
+                }
+                // 对于small，尝试对齐到1/3网格位置
+                else if (size === 'small') {
+                    const smallWidth = (gridWidth - gap * 2) / 3;
+                    candidateXs.push(0, smallWidth + gap, (smallWidth + gap) * 2);
+                }
+                // 对于regular，尝试对齐到2/5网格位置
+                else if (size === 'regular') {
+                    const regularWidth = (gridWidth - gap * 1.5) / 2.5;
+                    candidateXs.push(0, regularWidth + gap, regularWidth * 2 + gap * 2);
+                }
+                // 窗口小时，所有卡片单列排布
+                if (isSmallWindow) {
+                    candidateXs.push(0);
+                }
+                // 对于super，只有一种可能（全宽）
+                else if (size === 'super') {
+                    candidateXs.push(0);
+                }
+                // 对于large，尝试5/6宽度位置
+                else if (size === 'large') {
+                    const largeWidth = (gridWidth - gap * 0.2) / 1.2;
+                    candidateXs.push(0, largeWidth + gap);
+                }
+                // 对于extra，尝试2/3宽度位置
+                else if (size === 'extra') {
+                    const extraWidth = (gridWidth - gap * 0.5) / 1.5;
+                    candidateXs.push(0, extraWidth + gap);
+                }
+                // 对于big，尝试左对齐和右对齐（1/2宽度）
+                else if (size === 'big') {
+                    const bigWidth = (gridWidth - gap) / 2;
+                    candidateXs.push(0, bigWidth + gap);
+                }
+                // 对于medium，使用45%宽度，尝试多个位置
+                else if (size === 'medium') {
+                    const mediumWidth = gridWidth * 0.45;
+                    candidateXs.push(0, mediumWidth + gap, mediumWidth * 2 + gap * 2);
+                }
+                // 默认情况
+                else {
+                    candidateXs.push(0);
+                }
+                
+                // 也尝试一些中间位置（更灵活的布局）
+                for (let x = 0; x <= gridWidth - cardWidth; x += 20) {
+                    if (!candidateXs.includes(x)) {
+                        candidateXs.push(x);
+                    }
+                }
+                
+                // 对每个候选x位置，找到最低的y位置
+                candidateXs.forEach(x => {
+                    if (x + cardWidth > gridWidth) return; // 超出边界
+                    
+                    let maxY = 0;
+                    
+                    // 检查与已放置项目的重叠
+                    for (const item of placedItems) {
+                        // 检查水平方向是否重叠
+                        const horizontalOverlap = !(x + cardWidth <= item.x || x >= item.x + item.width);
+                        
+                        if (horizontalOverlap) {
+                            // 有重叠，y位置必须在已放置项目下方
+                            maxY = Math.max(maxY, item.y + item.height + gap);
+                        }
+                    }
+                    
+                    // 如果这个位置比之前找到的最佳位置更低，更新最佳位置
+                    if (maxY < minY) {
+                        minY = maxY;
+                        bestX = x;
+                        bestY = maxY;
+                    }
+                });
+                
+                // 如果找不到合适位置，放在顶部
+                if (minY === Infinity) {
+                    bestY = 0;
+                }
+                
+                // 设置卡片位置和尺寸
+                card.style.left = bestX + 'px';
+                card.style.top = bestY + 'px';
+                card.style.width = cardWidth + 'px';
+                
+                // 记录这个项目的占用区域
+                placedItems.push({
+                    x: bestX,
+                    y: bestY,
+                    width: cardWidth,
+                    height: cardHeight
+                });
+            });
+
+            // 计算容器总高度
+            let maxHeight = 0;
+            placedItems.forEach(item => {
+                maxHeight = Math.max(maxHeight, item.y + item.height);
+            });
+            grid.style.height = maxHeight + 'px';
+            
+            isLayouting = false;
+        }
+
+        // 渲染项目网格
+        function renderProjects(category = 'all') {
+            const grid = document.getElementById('projectsGrid');
+            
+            const filteredProjects = category === 'all' 
+                ? projects 
+                : projects.filter(p => p.category === category);
+            
+            grid.innerHTML = filteredProjects.map(project => {
+                // 封面图
+                let coverHTML = project.cover 
+                    ? `<img src="${project.cover}" alt="${project.title}" class="cover-image">` 
+                    : '<div class="cover-image" style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>';
+                
+                // 预览视频
+                let previewVideoHTML = '';
+                if (project.video && project.video.src) {
+                    if (project.video.type === 'video') {
+                        // 本地视频
+                        previewVideoHTML = `<video src="${project.video.src}" class="preview-video" loop muted playsinline></video>`;
+                    } else if (project.video.type === 'youtube') {
+                        // YouTube 不支持悬停预览，使用封面
+                        previewVideoHTML = '';
+                    } else if (project.video.type === 'bilibili') {
+                        // Bilibili 不支持悬停预览，使用封面
+                        previewVideoHTML = '';
+                    }
+                }
+                
+                // 获取项目尺寸，默认为small
+                const size = project.size || 'small';
+                
+                // 判断是否有预览视频
+                const hasVideo = project.video && project.video.src && project.video.type === 'video';
+                const videoClass = hasVideo ? 'has-video' : '';
+                
+                return `
+                    <div class="project-card size-${size} ${videoClass}" 
+                         data-project-id="${project.id}"
+                         onclick="openModal(${project.id})"
+                         onmouseenter="playPreview(${project.id})"
+                         onmouseleave="pausePreview(${project.id})">
+                        <div class="project-image">
+                            ${coverHTML}
+                            ${previewVideoHTML}
+                        </div>
+                        <div class="project-info">
+                            <h3 class="project-title">${project.title}</h3>
+                            <div class="project-tags">
+                                ${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // 等待DOM更新后执行瀑布流布局
+            setTimeout(() => {
+                layoutMasonry();
+            }, 50);
+
+            // 等待所有图片/视频加载并更新宽高比
+            const cards = grid.querySelectorAll('.project-card');
+            cards.forEach(card => {
+                const imageContainer = card.querySelector('.project-image');
+                if (!imageContainer) return;
+                
+                // 优先使用视频的实际宽高比，如果没有视频则使用封面图
+                const coverImage = card.querySelector('img.cover-image');
+                const previewVideo = card.querySelector('video.preview-video');
+                
+                // 标记是否已经设置了比例
+                let aspectRatioSet = false;
+                
+                // 优先使用视频的实际宽高比
+                if (previewVideo) {
+                    if (previewVideo.readyState >= 2 && previewVideo.videoWidth && previewVideo.videoHeight) {
+                        // 视频已加载，直接使用视频比例
+                        updateVideoAspectRatio(previewVideo);
+                        aspectRatioSet = true;
+                    } else {
+                        // 等待视频元数据加载
+                        previewVideo.addEventListener('loadedmetadata', () => {
+                            if (previewVideo.videoWidth && previewVideo.videoHeight) {
+                                updateVideoAspectRatio(previewVideo);
+                                aspectRatioSet = true;
+                            }
+                        }, { once: true });
+                        previewVideo.addEventListener('error', () => {
+                            // 视频加载失败，尝试使用封面图的实际比例
+                            if (coverImage && coverImage.src) {
+                                if (coverImage.complete && coverImage.naturalWidth && coverImage.naturalHeight) {
+                                    updateImageAspectRatio(coverImage);
+                                    aspectRatioSet = true;
+                                } else {
+                                    coverImage.addEventListener('load', () => {
+                                        if (coverImage.naturalWidth && coverImage.naturalHeight) {
+                                            updateImageAspectRatio(coverImage);
+                                            aspectRatioSet = true;
+                                        }
+                                    }, { once: true });
+                                    coverImage.addEventListener('error', () => {
+                                        // 封面图也加载失败，使用默认值
+                                        setTimeout(() => {
+                                            if (!aspectRatioSet) {
+                                                setImageContainerHeight(imageContainer, 0.5625);
+                                                setTimeout(() => layoutMasonry(), 50);
+                                            }
+                                        }, 1000);
+                                    }, { once: true });
+                                }
+                            } else {
+                                // 没有封面图，使用默认值
+                                setTimeout(() => {
+                                    if (!aspectRatioSet) {
+                                        setImageContainerHeight(imageContainer, 0.5625);
+                                        setTimeout(() => layoutMasonry(), 50);
+                                    }
+                                }, 1000);
+                            }
+                        }, { once: true });
+                    }
+                } else if (coverImage && coverImage.src) {
+                    // 没有视频，使用封面图的实际宽高比
+                    if (coverImage.complete && coverImage.naturalWidth && coverImage.naturalHeight) {
+                        updateImageAspectRatio(coverImage);
+                        aspectRatioSet = true;
+                    } else {
+                        coverImage.addEventListener('load', () => {
+                            if (coverImage.naturalWidth && coverImage.naturalHeight) {
+                                updateImageAspectRatio(coverImage);
+                                aspectRatioSet = true;
+                            }
+                        }, { once: true });
+                        coverImage.addEventListener('error', () => {
+                            // 封面图加载失败，使用默认值
+                            setTimeout(() => {
+                                if (!aspectRatioSet) {
+                                    setImageContainerHeight(imageContainer, 0.5625);
+                                    setTimeout(() => layoutMasonry(), 50);
+                                }
+                            }, 1000);
+                        }, { once: true });
+                    }
+                } else {
+                    // 既没有封面图也没有视频，使用默认高度（仅作为后备方案）
+                    setTimeout(() => {
+                        if (!aspectRatioSet) {
+                            setImageContainerHeight(imageContainer, 0.5625);
+                        }
+                    }, 500);
+                }
+            });
+            
+            // 确保布局执行
+            setTimeout(() => layoutMasonry(), 100);
+        }
+
+        // 播放预览视频
+        function playPreview(projectId) {
+            const card = document.querySelector(`[data-project-id="${projectId}"]`);
+            if (!card) return;
+            
+            const video = card.querySelector('.preview-video');
+            if (video) {
+                // 有视频元素，尝试播放
+                video.play().catch(err => {
+                    console.log('Video play failed:', err);
+                });
+            }
+            // 如果没有视频元素，不执行任何操作（封面图会保持显示）
+        }
+
+        // 暂停预览视频
+        function pausePreview(projectId) {
+            const card = document.querySelector(`[data-project-id="${projectId}"]`);
+            if (!card) return;
+            
+            const video = card.querySelector('.preview-video');
+            if (video) {
+                video.pause();
+                video.currentTime = 0;
+            }
+        }
+
+        // 当前打开的项目和媒体索引
+        let currentProject = null;
+        let currentMediaIndex = 0;
+
+        // 打开弹出层
+        function openModal(projectId) {
+            const project = projects.find(p => p.id === projectId);
+            if (!project) return;
+
+            // 先停止所有预览视频，避免同时播放
+            const previewVideos = document.querySelectorAll('.preview-video');
+            previewVideos.forEach(video => {
+                video.pause();
+                video.currentTime = 0;
+            });
+
+            currentProject = project;
+            currentMediaIndex = 0;
+
+            // 设置项目信息
+            document.getElementById('modalTitle').textContent = project.title;
+            document.getElementById('modalDescription').textContent = project.description;
+            document.getElementById('modalTime').textContent = project.time;
+            document.getElementById('modalTools').textContent = project.tools;
+            
+            const tagsContainer = document.getElementById('modalTags');
+            tagsContainer.innerHTML = project.tags.map(tag => 
+                `<span class="modal-tag">${tag}</span>`
+            ).join('');
+
+            // 渲染媒体
+            renderMedia();
+            
+            // 显示/隐藏箭头
+            updateMediaControls();
+
+            document.getElementById('modalOverlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 渲染媒体
+        function renderMedia() {
+            if (!currentProject) {
+                document.getElementById('modalMediaContainer').innerHTML = '<div class="media-placeholder">No Media</div>';
+                return;
+            }
+
+            // 构建完整媒体列表：主视频 + 额外媒体
+            const allMedia = [];
+            
+            // 添加主视频
+            if (currentProject.video && currentProject.video.src) {
+                allMedia.push(currentProject.video);
+            }
+            
+            // 添加额外媒体
+            if (currentProject.media && currentProject.media.length > 0) {
+                allMedia.push(...currentProject.media);
+            }
+            
+            // 如果没有任何媒体
+            if (allMedia.length === 0) {
+                document.getElementById('modalMediaContainer').innerHTML = '<div class="media-placeholder">No Media</div>';
+                return;
+            }
+
+            const media = allMedia[currentMediaIndex];
+            const container = document.getElementById('modalMediaContainer');
+            
+            let mediaHTML = '';
+            
+            if (!media.src) {
+                mediaHTML = '<div class="media-placeholder">Project Media</div>';
+            } else if (media.type === 'image') {
+                mediaHTML = `<img src="${media.src}" class="modal-image" alt="${currentProject.title}">`;
+            } else if (media.type === 'video') {
+                // 本地视频 - 所有视频都自动播放并带声音
+                mediaHTML = `<video src="${media.src}" class="modal-video" controls autoplay></video>`;
+            } else if (media.type === 'youtube') {
+                // YouTube - 所有视频都自动播放
+                mediaHTML = `<iframe class="modal-video" src="https://www.youtube.com/embed/${media.src}?autoplay=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+            } else if (media.type === 'bilibili') {
+                // Bilibili - 所有视频都自动播放
+                mediaHTML = `<iframe class="modal-video" src="//player.bilibili.com/player.html?bvid=${media.src}&page=1&autoplay=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>`;
+            }
+            
+            // 添加控制箭头和导航点
+            mediaHTML += `
+                <div class="media-arrow prev ${allMedia.length > 1 ? '' : 'hidden'}" id="mediaPrev">‹</div>
+                <div class="media-arrow next ${allMedia.length > 1 ? '' : 'hidden'}" id="mediaNext">›</div>
+                <div class="media-nav" id="mediaNav"></div>
+            `;
+            
+            container.innerHTML = mediaHTML;
+            
+            // 对于本地视频，确保自动播放并带声音
+            if (media.type === 'video') {
+                const videoElement = container.querySelector('video.modal-video');
+                if (videoElement) {
+                    videoElement.muted = false; // 确保有声音
+                    videoElement.play().catch(err => {
+                        console.log('视频自动播放失败，可能需要用户交互:', err);
+                    });
+                }
+            }
+            
+            // 渲染导航点
+            renderMediaNav(allMedia.length);
+            
+            // 绑定箭头事件
+            if (allMedia.length > 1) {
+                document.getElementById('mediaPrev').onclick = () => changeMedia(-1);
+                document.getElementById('mediaNext').onclick = () => changeMedia(1);
+            }
+            
+            // 更新箭头显示状态
+            updateMediaControls();
+        }
+
+        // 渲染媒体导航点
+        function renderMediaNav(totalMedia) {
+            if (!totalMedia || totalMedia <= 1) return;
+            
+            const navContainer = document.getElementById('mediaNav');
+            const dots = [];
+            for (let i = 0; i < totalMedia; i++) {
+                dots.push(`<div class="media-nav-dot ${i === currentMediaIndex ? 'active' : ''}" onclick="changeMediaTo(${i})"></div>`);
+            }
+            navContainer.innerHTML = dots.join('');
+        }
+
+        // 切换媒体
+        function changeMedia(direction) {
+            if (!currentProject) return;
+            
+            // 先停止当前播放的视频
+            const currentVideo = document.querySelector('.modal-video');
+            if (currentVideo) {
+                if (currentVideo.tagName === 'VIDEO') {
+                    currentVideo.pause();
+                    currentVideo.currentTime = 0;
+                } else if (currentVideo.tagName === 'IFRAME') {
+                    // 对于 iframe，先移除 src 停止播放
+                    currentVideo.src = '';
+                }
+            }
+            
+            // 计算总媒体数
+            let totalMedia = 0;
+            if (currentProject.video && currentProject.video.src) totalMedia++;
+            if (currentProject.media) totalMedia += currentProject.media.length;
+            
+            if (totalMedia === 0) return;
+            
+            currentMediaIndex = (currentMediaIndex + direction + totalMedia) % totalMedia;
+            renderMedia();
+        }
+
+        // 跳转到指定媒体
+        function changeMediaTo(index) {
+            if (!currentProject) return;
+            
+            // 先停止当前播放的视频
+            const currentVideo = document.querySelector('.modal-video');
+            if (currentVideo) {
+                if (currentVideo.tagName === 'VIDEO') {
+                    currentVideo.pause();
+                    currentVideo.currentTime = 0;
+                } else if (currentVideo.tagName === 'IFRAME') {
+                    // 对于 iframe，先移除 src 停止播放
+                    currentVideo.src = '';
+                }
+            }
+            
+            // 计算总媒体数
+            let totalMedia = 0;
+            if (currentProject.video && currentProject.video.src) totalMedia++;
+            if (currentProject.media) totalMedia += currentProject.media.length;
+            
+            if (index < 0 || index >= totalMedia) return;
+            
+            currentMediaIndex = index;
+            renderMedia();
+        }
+
+        // 更新媒体控制显示
+        function updateMediaControls() {
+            if (!currentProject) return;
+            
+            // 计算总媒体数（主视频 + 额外媒体）
+            let totalMedia = 0;
+            if (currentProject.video && currentProject.video.src) totalMedia++;
+            if (currentProject.media) totalMedia += currentProject.media.length;
+            
+            const hasMultipleMedia = totalMedia > 1;
+            const prevBtn = document.getElementById('mediaPrev');
+            const nextBtn = document.getElementById('mediaNext');
+            
+            if (prevBtn && nextBtn) {
+                if (hasMultipleMedia) {
+                    prevBtn.classList.remove('hidden');
+                    nextBtn.classList.remove('hidden');
+                } else {
+                    prevBtn.classList.add('hidden');
+                    nextBtn.classList.add('hidden');
+                }
+            }
+        }
+
+        // 关闭弹出层
+        function closeModal() {
+            // 停止弹出层内的所有视频
+            const modalVideos = document.querySelectorAll('.modal-video');
+            modalVideos.forEach(video => {
+                if (video.tagName === 'VIDEO') {
+                    video.pause();
+                    video.currentTime = 0;
+                } else if (video.tagName === 'IFRAME') {
+                    // 对于YouTube和Bilibili的iframe，移除src来停止播放
+                    // 这样更彻底，避免音频继续播放
+                    video.src = '';
+                }
+            });
+            
+            // 停止所有项目卡片上的预览视频
+            const previewVideos = document.querySelectorAll('.preview-video');
+            previewVideos.forEach(video => {
+                video.pause();
+                video.currentTime = 0;
+            });
+            
+            document.getElementById('modalOverlay').classList.remove('active');
+            document.body.style.overflow = 'auto';
+            currentProject = null;
+            currentMediaIndex = 0;
+        }
+
+        // 事件监听
+        document.getElementById('modalClose').addEventListener('click', closeModal);
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // 分类切换
+        document.querySelectorAll('.category-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // 更新活动状态
+                document.querySelectorAll('.category-link').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+                
+                // 渲染对应分类的项目
+                const category = this.getAttribute('data-category');
+                renderProjects(category);
+            });
+        });
+
+        // ESC键关闭弹出层
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // 检测是否全屏
+        function isFullscreen() {
+            return !!(document.fullscreenElement || 
+                     document.webkitFullscreenElement || 
+                     document.mozFullScreenElement || 
+                     document.msFullscreenElement);
+        }
+
+        // 尝试进入全屏
+        function requestFullscreen() {
+            const element = document.documentElement;
+            if (element.requestFullscreen) {
+                element.requestFullscreen();
+            } else if (element.webkitRequestFullscreen) {
+                element.webkitRequestFullscreen();
+            } else if (element.mozRequestFullScreen) {
+                element.mozRequestFullScreen();
+            } else if (element.msRequestFullscreen) {
+                element.msRequestFullscreen();
+            }
+        }
+
+        // 页面加载时尝试全屏
+        window.addEventListener('load', () => {
+            // 延迟一点尝试全屏，避免被浏览器阻止
+            setTimeout(() => {
+                if (!isFullscreen()) {
+                    requestFullscreen().catch(err => {
+                        console.log('无法自动全屏，需要用户交互:', err);
+                    });
+                }
+            }, 500);
+        });
+
+        // 窗口大小改变时重新布局和重新计算高度，或刷新页面
+        let resizeTimer;
+        let lastWindowWidth = window.innerWidth;
+        let lastWindowHeight = window.innerHeight;
+        let wasFullscreen = isFullscreen();
+
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                const currentFullscreen = isFullscreen();
+                const widthChanged = Math.abs(window.innerWidth - lastWindowWidth) > 50;
+                const heightChanged = Math.abs(window.innerHeight - lastWindowHeight) > 50;
+                
+                // 如果全屏状态改变或窗口大小显著改变，刷新页面
+                if (wasFullscreen !== currentFullscreen || widthChanged || heightChanged) {
+                    window.location.reload();
+                    return;
+                }
+                
+                // 否则重新计算布局
+                const cards = document.querySelectorAll('.project-card');
+                cards.forEach(card => {
+                    const imageContainer = card.querySelector('.project-image');
+                    if (!imageContainer) return;
+                    
+                    const coverImage = card.querySelector('img.cover-image');
+                    const previewVideo = card.querySelector('video.preview-video');
+                    
+                    // 优先使用视频的实际比例
+                    if (previewVideo && previewVideo.videoWidth && previewVideo.videoHeight) {
+                        const aspectRatio = previewVideo.videoHeight / previewVideo.videoWidth;
+                        setImageContainerHeight(imageContainer, aspectRatio);
+                    } 
+                    // 如果没有视频，使用封面图的实际比例
+                    else if (coverImage && coverImage.naturalWidth && coverImage.naturalHeight) {
+                        const aspectRatio = coverImage.naturalHeight / coverImage.naturalWidth;
+                        setImageContainerHeight(imageContainer, aspectRatio);
+                    } 
+                    // 只有在完全没有媒体时才使用默认值
+                    else {
+                        // 尝试等待一下，看是否有媒体正在加载
+                        setTimeout(() => {
+                            if (previewVideo && previewVideo.videoWidth && previewVideo.videoHeight) {
+                                const aspectRatio = previewVideo.videoHeight / previewVideo.videoWidth;
+                                setImageContainerHeight(imageContainer, aspectRatio);
+                            } else if (coverImage && coverImage.naturalWidth && coverImage.naturalHeight) {
+                                const aspectRatio = coverImage.naturalHeight / coverImage.naturalWidth;
+                                setImageContainerHeight(imageContainer, aspectRatio);
+                            } else {
+                                setImageContainerHeight(imageContainer, 0.5625); // 默认16:9（仅作为最后的后备方案）
+                            }
+                        }, 500);
+                    }
+                });
+                
+                // 重新布局
+                layoutMasonry();
+                
+                // 更新记录
+                lastWindowWidth = window.innerWidth;
+                lastWindowHeight = window.innerHeight;
+                wasFullscreen = currentFullscreen;
+            }, 250);
+        });
+
+        // 监听全屏状态变化
+        document.addEventListener('fullscreenchange', () => {
+            if (isFullscreen() !== wasFullscreen) {
+                setTimeout(() => window.location.reload(), 100);
+            }
+        });
+        document.addEventListener('webkitfullscreenchange', () => {
+            if (isFullscreen() !== wasFullscreen) {
+                setTimeout(() => window.location.reload(), 100);
+            }
+        });
+        document.addEventListener('mozfullscreenchange', () => {
+            if (isFullscreen() !== wasFullscreen) {
+                setTimeout(() => window.location.reload(), 100);
+            }
+        });
+        document.addEventListener('MSFullscreenChange', () => {
+            if (isFullscreen() !== wasFullscreen) {
+                setTimeout(() => window.location.reload(), 100);
+            }
+        });
+
+        // 初始化渲染 - 默认显示All页面
+        renderProjects('all');
+    </script>
+</body>
+</html>
+
