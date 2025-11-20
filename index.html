@@ -524,23 +524,85 @@
 
         /* 响应式设计 */
         @media (max-width: 768px) {
-            .sidebar {
-                width: 100%;
-                position: relative;
-                height: auto;
-                border-right: none;
-                border-bottom: 1px solid #1a1a1a;
-                padding: 30px 20px;
+            /* 顶部装饰文字 - 移动端居中显示 */
+            .header-decoration {
+                position: fixed;
+                top: 15px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 101;
+                text-align: center;
             }
 
+            .header-decoration .main-title {
+                font-size: 16px;
+                margin-bottom: 2px;
+            }
+
+            .header-decoration .subtitle {
+                font-size: 9px;
+            }
+
+            /* 侧边栏 - 移动端改为固定在顶部，在FuWei文字下方 */
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: auto;
+                background-color: #0a0a0a;
+                border-right: none;
+                border-bottom: 1px solid #1a1a1a;
+                padding: 50px 15px 15px 15px; /* 顶部padding为FuWei文字留出空间 */
+                z-index: 100;
+            }
+
+            .sidebar h1 {
+                display: none; /* 隐藏Portfolio标题 */
+            }
+
+            .category-list {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px 15px;
+                margin-top: 0;
+                justify-content: center; /* 目录居中 */
+            }
+
+            .category-item {
+                margin-bottom: 0;
+            }
+
+            .category-link {
+                font-size: 18px; /* 目录字体大小 */
+                padding: 4px 0;
+            }
+
+            /* 主要内容区域 - 从目录下方开始，取消左右padding让项目占满屏幕 */
             .main-content {
                 margin-left: 0;
-                padding: 150px 20px 40px 20px;
+                padding: 100px 0 20px 0; /* 取消左右padding，让项目占满屏幕宽度 */
+            }
+
+            /* 项目网格 - 移动端确保没有额外margin和padding */
+            .projects-grid {
+                margin-left: 0;
+                margin-right: 0;
+                margin-bottom: 20px; /* 减少底部margin */
+                padding: 0;
             }
 
             .project-card {
-                width: 100% !important;
+                width: auto !important; /* 移动端宽度自适应，根据视频比例 */
+                max-width: 100vw !important; /* 最大不超过屏幕宽度 */
                 position: relative !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important; /* 居中显示 */
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                margin-bottom: 15px !important;
+                border: none !important; /* 移除所有边框 */
+                padding: 0 !important; /* 移除所有padding */
             }
             
             .project-card.size-mini,
@@ -552,12 +614,42 @@
             .project-card.size-extra,
             .project-card.size-large,
             .project-card.size-super {
-                width: 100% !important;
+                width: auto !important; /* 所有size在移动端都自适应 */
+                max-width: 100vw !important;
             }
             
             .project-image {
-                height: 300px !important; /* 移动端使用固定高度 */
+                height: auto !important; /* 移动端高度自适应 */
                 padding-bottom: 0 !important;
+                width: auto !important; /* 宽度自适应 */
+                max-width: 100vw !important; /* 最大不超过屏幕宽度 */
+                margin: 0 auto !important; /* 居中 */
+            }
+            
+            /* 移动端保持absolute定位，封面图覆盖视频，不拼接 */
+            .project-image .cover-image {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important; /* 相对于容器100% */
+                height: 100% !important;
+                object-fit: contain !important;
+                z-index: 2;
+            }
+            
+            .project-image .preview-video {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important; /* 相对于容器100% */
+                height: 100% !important;
+                object-fit: contain !important;
+                z-index: 1;
+            }
+            
+            /* 移动端：当项目进入视口时，隐藏封面图显示视频 */
+            .project-card.has-video.in-viewport .cover-image {
+                opacity: 0;
             }
 
             .modal-content {
@@ -1162,6 +1254,9 @@
         function setImageContainerHeight(imageContainer, aspectRatio) {
             if (!imageContainer) return;
             
+            // 检查是否是移动端
+            const isMobile = window.innerWidth < 768;
+            
             // 尝试获取容器宽度，如果还没有渲染完成，等待一下
             let containerWidth = imageContainer.offsetWidth;
             if (!containerWidth) {
@@ -1177,7 +1272,47 @@
                 return;
             }
             
-            // 计算实际高度（保持原始比例）
+            // 移动端：根据视频宽高比决定是宽度优先还是高度优先
+            if (isMobile) {
+                const screenWidth = window.innerWidth;
+                const screenHeight = window.innerHeight;
+                
+                let containerWidth, containerHeight;
+                
+                // 判断是竖版视频（高宽比>1）还是横版视频
+                if (aspectRatio > 1) {
+                    // 竖版视频：高度占满屏幕，宽度自适应
+                    containerHeight = screenHeight * 0.9; // 留一点边距
+                    containerWidth = containerHeight / aspectRatio;
+                } else {
+                    // 横版视频：宽度占满屏幕，高度自适应
+                    containerWidth = screenWidth;
+                    containerHeight = containerWidth * aspectRatio;
+                }
+                
+                // 设置容器宽度和高度
+                imageContainer.style.width = containerWidth + 'px';
+                imageContainer.style.height = containerHeight + 'px';
+                imageContainer.style.paddingBottom = '0';
+                
+                // 移动端使用contain模式保持原始比例，视频和图片都是100%容器尺寸
+                const coverImage = imageContainer.querySelector('img.cover-image');
+                const previewVideo = imageContainer.querySelector('video.preview-video');
+                
+                if (coverImage) {
+                    coverImage.style.objectFit = 'contain';
+                    coverImage.style.width = '100%';
+                    coverImage.style.height = '100%';
+                }
+                if (previewVideo) {
+                    previewVideo.style.objectFit = 'contain';
+                    previewVideo.style.width = '100%';
+                    previewVideo.style.height = '100%';
+                }
+                return;
+            }
+            
+            // 桌面端：计算实际高度（保持原始比例）
             let calculatedHeight = containerWidth * aspectRatio;
             
             // 限制高度范围（最小200px，最大800px）
@@ -1255,7 +1390,8 @@
             isLayouting = true;
 
             const gridWidth = grid.offsetWidth;
-            const gap = 70;
+            // 移动端使用更小的间距
+            const gap = gridWidth < 768 ? 15 : 70;
             
             // 记录已放置项目的占用区域 [x, y, width, height]
             const placedItems = [];
@@ -1273,14 +1409,20 @@
                             card.classList.contains('size-tiny') ? 'tiny' :
                             card.classList.contains('size-mini') ? 'mini' : 'small';
                 
-                // 窗口小时单列排布（所有卡片100%宽度）
+                // 窗口小时单列排布（所有卡片屏幕宽度）
                 const isSmallWindow = gridWidth < 768;
                 
                 // 根据size计算卡片宽度
                 let cardWidth;
                 if (isSmallWindow) {
-                    // 窗口小时，所有卡片单列排布
-                    cardWidth = gridWidth;
+                    // 移动端：获取卡片实际宽度（已经根据视频比例设置）
+                    const imageContainer = card.querySelector('.project-image');
+                    if (imageContainer && imageContainer.offsetWidth > 0) {
+                        cardWidth = imageContainer.offsetWidth;
+                    } else {
+                        // 如果还没有渲染，使用屏幕宽度作为默认值
+                        cardWidth = window.innerWidth;
+                    }
                 } else if (size === 'super') {
                     cardWidth = gridWidth; // 100%宽度
                 } else if (size === 'large') {
@@ -1401,6 +1543,11 @@
                 // 如果找不到合适位置，放在顶部
                 if (minY === Infinity) {
                     bestY = 0;
+                }
+                
+                // 移动端强制从左侧开始
+                if (isSmallWindow) {
+                    bestX = 0;
                 }
                 
                 // 设置卡片位置和尺寸
@@ -1998,6 +2145,65 @@
             if (isFullscreen() !== wasFullscreen) {
                 setTimeout(() => window.location.reload(), 100);
             }
+        });
+
+        // 移动端滚动监听：当项目进入视口时自动播放视频
+        function setupScrollVideoPlayback() {
+            // 只在移动端启用
+            if (window.innerWidth >= 768) return;
+            
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.5 // 当项目50%进入视口时触发
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const card = entry.target;
+                    const video = card.querySelector('.preview-video');
+                    
+                    if (entry.isIntersecting) {
+                        // 项目进入视口，添加in-viewport类并播放视频
+                        card.classList.add('in-viewport');
+                        if (video) {
+                            video.play().catch(err => {
+                                console.log('Video play failed:', err);
+                            });
+                        }
+                    } else {
+                        // 项目离开视口，移除in-viewport类并暂停视频
+                        card.classList.remove('in-viewport');
+                        if (video) {
+                            video.pause();
+                            video.currentTime = 0;
+                        }
+                    }
+                });
+            }, observerOptions);
+            
+            // 观察所有有视频的项目卡片
+            const cardsWithVideo = document.querySelectorAll('.project-card.has-video');
+            cardsWithVideo.forEach(card => {
+                observer.observe(card);
+            });
+        }
+        
+        // 在项目渲染后设置滚动监听
+        const originalRenderProjects = renderProjects;
+        renderProjects = function(category) {
+            originalRenderProjects(category);
+            // 延迟一下，确保DOM已更新
+            setTimeout(() => {
+                setupScrollVideoPlayback();
+            }, 100);
+        };
+        
+        // 窗口大小改变时重新设置
+        window.addEventListener('resize', () => {
+            setTimeout(() => {
+                setupScrollVideoPlayback();
+            }, 100);
         });
 
         // 初始化渲染 - 默认显示All页面
