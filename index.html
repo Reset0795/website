@@ -679,13 +679,24 @@
             .project-image {
                 width: 100vw !important; /* 移动端固定屏幕宽度 */
                 height: 0 !important;
-                padding-bottom: 100% !important; /* 1:1 正方形比例，兼顾横版和竖版 */
+                padding-bottom: 100% !important; /* 默认 1:1 正方形比例 */
                 min-height: 0 !important;
                 margin: 0 !important;
                 max-width: none !important; /* 移除最大宽度限制 */
                 box-sizing: border-box !important;
                 position: relative !important; /* 确保绝对定位的子元素能正确定位 */
                 overflow: hidden !important;
+                transition: padding-bottom 0.3s ease; /* 平滑过渡 */
+            }
+            
+            /* 横版视频：4:3 比例 (宽度较大) */
+            .project-card.video-landscape .project-image {
+                padding-bottom: 75% !important; /* 4:3 = 3/4 = 0.75 */
+            }
+            
+            /* 竖版视频：3:4 比例 (高度较大) */
+            .project-card.video-portrait .project-image {
+                padding-bottom: 133.33% !important; /* 3:4 = 4/3 = 1.3333 */
             }
             
             /* 移动端保持absolute定位，封面图覆盖视频，不拼接 */
@@ -808,8 +819,11 @@
     </div>
 
     <script>
-        // 阿里云OSS基础URL配置
-        const OSS_BASE_URL = 'https://portfolio-fuwei.oss-cn-shanghai.aliyuncs.com/';
+        // 阿里云OSS传输加速域名（解决 Chrome PNA 安全提示）
+        const OSS_BASE_URL = 'https://portfolio-fuwei.oss-accelerate.aliyuncs.com/';
+        
+        // 备注：如果传输加速不可用，可切换回原域名
+        // const OSS_BASE_URL = 'https://portfolio-fuwei.oss-cn-shanghai.aliyuncs.com/';
         
         // 资源路径处理函数：自动拼接OSS域名
         function getResourceUrl(path) {
@@ -831,6 +845,7 @@
                 cover: 'images/sigma_cover.png',  // 封面图（必需）
                 video: { type: 'video', src: 'videos/sigma_video.mp4' },  // 主视频（必需）
                 size: 'medium',  // 项目尺寸: 'mini', 'tiny', 'small', 'regular', 'medium', 'big', 'extra', 'large', 'super'
+                orientation: 'portrait',  // 移动端视频方向（可选）: 'landscape'(横版4:3) / 'portrait'(竖版3:4) / 'square'(正方形1:1，默认)
                 // 额外媒体（可选）- 详情页中的其他图片和视频
                 media: [],
                 description: '该项目是为Sigma运动app制作功能宣传片，通过3D动画展示产品的各项功能，包括运动记录、AI伙伴、社区分享卡、数据同步等。除视频开头的实拍镜头外，其他部分均由本人独立完成，包括从静态设定到动态制作，再到后期渲染与剪辑的全流程工作。',
@@ -845,6 +860,7 @@
                 cover: 'images/about4_cover1.png',  // 封面图路径
                 video: { type: 'video', src: 'videos/about4_video1.mp4' },  // 视频路径
                 size: 'big',  // 项目尺寸
+                orientation: 'landscape',  // 横版视频
                 media: [],  // 额外媒体（可选）
                 description: '该项目是为about04期《想开一家买手店》制作的开店步骤AtoZ科普向动画，通过2D动画展示开一家买手店的相关知识，风格上以扁平化为主，通过简洁的线条和色块来展示，并在2D动态中穿插了部分三渲二效果镜头。该动画从静帧设定到动态制作均由本人全流程独立完成。',
                 time: 'June 2024',
@@ -858,6 +874,7 @@
                 cover: 'images/staffroom_cover.png',
                 video: { type: 'video', src: 'videos/staffroom_video.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [
                     { type: 'image', src: 'images/staffroom_image1.png' },
                     { type: 'video', src: 'videos/staffroom_video6.mp4' },
@@ -875,6 +892,7 @@
                 cover: 'images/about3_cover1.png',
                 video: { type: 'video', src: 'videos/about3_video1.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为about03期《一出门就心情好》制作的一支预热短片，通过3D动画展示杂志本期的主题与户外、运动有关，动画部分以动力学模拟为主。该动画制作阶段由本人独立完成。',
                 time: 'June 2023',
@@ -888,6 +906,7 @@
                 cover: 'images/life_service_cover.png',
                 video: { type: 'video', src: 'videos/life_service_video.mp4' },
                 size: 'medium',  // 项目尺寸
+                orientation: 'landscape',  // 横版视频
                 media: [],
                 description: '该项目是为线下生活服务大会制作的活动内宣动画。动态制作由本人独立完成。',
                 time: 'August 2024',
@@ -901,6 +920,7 @@
                 cover: 'images/about3_cover2.png',
                 video: { type: 'video', src: 'videos/about3_video2.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为about03期《一出门就心情好》制作的一支预热短片，通过3D动画展示杂志本期的主题与户外、运动有关，动画部分以动力学模拟为主。该动画制作阶段由本人独立完成。',
                 time: 'June 2023',
@@ -914,6 +934,7 @@
                 cover: 'images/design_week_cover.png',
                 video: { type: 'video', src: 'videos/design_week_video.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为设计周制作的一支倒计时实景合成短片，以线下活动的召开地点思南公馆为取景地进行拍摄，并进行cg制作合成，为活动进行预热宣传。该短片从创意到实地拍摄再到cg制作合成均由本人全流程独立完成。',
                 time: 'September 2024',
@@ -927,6 +948,7 @@
                 cover: 'images/about4_cover2.png',
                 video: { type: 'video', src: 'videos/about4_video2.mp4' },
                 size: 'medium',  // 项目尺寸
+                orientation: 'landscape',  // 横版视频
                 media: [],
                 description: '该项目是为about04期《想开一家买手店》制作的主宣传片，通过3D动画呈现买手店开门营业前的一系列准备工作，动画部分采用三渲二的风格渲染。该宣传片的美术部分由本人完成。',
                 time: 'June 2024',
@@ -940,6 +962,7 @@
                 cover: 'images/mirror_cover.png',
                 video: { type: 'video', src: 'videos/mirror_video.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为LaVie镜子支架制作的一支创意短片，通过3D动画展示镜子支架的创意设计和产品内涵，传达“不要沮丧，你是最酷的”的产品slogan。该短片从创意到静态设定再到动态制作由本人全流程完成。',
                 time: 'August 2023',
@@ -953,6 +976,7 @@
                 cover: 'images/snake_year_cover1.png',
                 video: { type: 'video', src: 'videos/snake_year_video1.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为LaVie蛇年礼盒制作的一支创意短片，通过3D动画展示礼盒的内部产品，在保持品牌可爱调性的同时展现新年的喜庆氛围。该短片从创意到静态设定再到动态制作由本人全流程独立完成。',
                 time: 'January 2025',
@@ -966,6 +990,7 @@
                 cover: 'images/snake_year_cover2.png',
                 video: { type: 'video', src: 'videos/snake_year_video2.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为LaVie蛇年礼盒制作的一支创意短片，通过3D动画展示礼盒的主要产品——蛇年毛绒玩偶，在保持品牌可爱调性的同时展现新年的喜庆氛围。该短片从创意到静态设定再到动态制作由本人全流程独立完成。',
                 time: 'January 2025',
@@ -979,6 +1004,7 @@
                 cover: 'images/staffroom_cover2.png',
                 video: { type: 'video', src: 'videos/staffroom_video2.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [
                     { type: 'video', src: 'videos/staffroom_video3.mp4' },
                     { type: 'video', src: 'videos/staffroom_video4.mp4' },
@@ -996,6 +1022,7 @@
                 cover: 'images/about4_cover3.png',
                 video: { type: 'video', src: 'videos/about4_video3.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为about04期《想开一家买手店》制作的一支预热短片，通过3D动画展示杂志本期的主题与买手店有关，动画部分以动力学模拟为主。从画面设定到动态制作均由本人独立完成。',
                 time: 'May 2024',
@@ -1009,6 +1036,7 @@
                 cover: 'images/link_cover.png',
                 video: { type: 'video', src: 'videos/link_video.mp4' },
                 size: 'super',  // 项目尺寸
+                orientation: 'landscape',  // 横版视频
                 media: [
                     { type: 'video', src: 'videos/link_video2.mp4' }
                 ],
@@ -1024,6 +1052,7 @@
                 cover: 'images/ai_cover1.png',
                 video: { type: 'video', src: 'videos/ai_video1.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为Lavie蛇年礼盒中的对联制作的AI视频，通过Midjourney生图加剪辑的方式营造千门万户曈曈日的新年氛围，同时也能呈现产品的使用场景。该视频从创意到制作由本人全流程独立完成。',
                 time: 'January 2025',
@@ -1037,6 +1066,7 @@
                 cover: 'images/ai_cover2.png',
                 video: { type: 'video', src: 'videos/ai_video2.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为Lavie马年礼盒制作的AI视频，通过即梦智能多帧生成的方式展现马年礼盒的主要产品，通过AI制作的方式极大地缩短了制作时间。该视频从创意到静态设定再到AI制作均由本人全流程完成。',
                 time: 'November 2025',
@@ -1050,6 +1080,7 @@
                 cover: 'images/ai_cover3.png',
                 video: { type: 'video', src: 'videos/ai_video3.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为about06期《去植物园逛逛吧》制作的AI视频，通过可灵首尾帧生成的方式展现翻书，书中生成珍稀花朵的动态效果，通过AI制作的方式极大地缩短了制作时间。该视频从创意到静态设定再到AI制作均由本人全流程完成。',
                 time: 'February 2025',
@@ -1063,6 +1094,7 @@
                 cover: 'images/ai_cover4.png',
                 video: { type: 'video', src: 'videos/ai_video4.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [
                     { type: 'video', src: 'videos/ai_video5.mp4' },
                     { type: 'video', src: 'videos/ai_video6.mp4' }
@@ -1079,6 +1111,7 @@
                 cover: 'images/cny_cover.png',
                 video: { type: 'video', src: 'videos/cny_video.mp4' },
                 size: 'large',  // 项目尺寸
+                orientation: 'landscape',  // 横版视频
                 media: [],
                 description: '该项目是为快消行业cny大会制作的开场秀，通过炮竹、饺子、游龙等图形变化营造新年氛围。本人参与了从创意到动态制作的全部环节。',
                 time: 'November 2023',
@@ -1092,6 +1125,7 @@
                 cover: 'images/umbrella_cover.png',
                 video: { type: 'video', src: 'videos/umbrella_video.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为LaVie雨伞制作的一支创意短片，通过3D动画展示雨伞的创意设计和品牌元素，展现趣味可爱的品牌调性。该短片从创意到静态设定再到动态制作均由本人全流程独立完成。',
                 time: 'July 2024',
@@ -1105,6 +1139,7 @@
                 cover: 'images/td_cover1.png',
                 video: { type: 'video', src: 'videos/td_video1.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为about05期《还好我喜欢听播客》制作的TD创意概念视频，通过touchdesigner的音画互动效果展现到处都是声音，到处都是播客的素材这一概念。该视频从创意到TD制作均由本人全流程独立完成。',
                 time: 'October 2024',
@@ -1118,6 +1153,7 @@
                 cover: 'images/td_cover2.png',
                 video: { type: 'video', src: 'videos/td_video2.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为about05期《还好我喜欢听播客》制作的TD创意概念视频，通过touchdesigner的音画互动效果展现到处都是声音，到处都是播客的素材这一概念。该视频从创意到TD制作均由本人全流程独立完成。',
                 time: 'October 2024',
@@ -1131,6 +1167,7 @@
                 cover: 'images/ai_cover7.png',
                 video: { type: 'video', src: 'videos/ai_video7.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为about07期《给明天的一句话》制作的AI视频，结合多个AI编程工具，以创意编程的方式完成了具有独特调性的概念视频。该视频从创意到AI编程均由本人全流程完成。',
                 time: 'March 2025',
@@ -1144,6 +1181,7 @@
                 cover: 'images/ip_cover.png',
                 video: { type: 'video', src: 'videos/ip_video.mp4' },
                 size: 'medium',  // 项目尺寸
+                orientation: 'landscape',  // 横版视频
                 media: [],
                 description: '该项目是为IP营销体验大会制作的开场秀，通过2d动画诠释IP营销的独特魅力，展示IP营销的商业理念和品牌感。本人参与了50%动态制作环节。',
                 time: 'March 2024',
@@ -1157,6 +1195,7 @@
                 cover: 'images/h5_cover.png',
                 video: { type: 'video', src: 'videos/h5_video.mp4' },
                 size: 'medium',  // 项目尺寸
+                orientation: 'landscape',  // 横版视频
                 media: [],
                 description: '该项目是为小红书十周年制作的站内动态H5页面，本人参与了全部动态制作环节。',
                 time: 'August 2023',
@@ -1170,6 +1209,7 @@
                 cover: 'images/life_service_cover2.png',
                 video: { type: 'video', src: 'videos/life_service_video2.mp4' },
                 size: 'super',  // 项目尺寸
+                orientation: 'landscape',  // 横版视频
                 media: [
                     { type: 'video', src: 'videos/life_service_video3.mp4' }
                 ],
@@ -1185,6 +1225,7 @@
                 cover: 'images/ai_cover8.png',
                 video: { type: 'video', src: 'videos/ai_video8.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为about07期《给明天的一句话》制作的AI视频，通过AI生成的方式创造金句的载体，让新书上线的信息出现在常见的地铁场景中。该视频从创意到AI生成再到后期AE文字动态合成均由本人全流程完成。',
                 time: 'June 2025',
@@ -1198,6 +1239,7 @@
                 cover: 'images/ai_cover9.png',
                 video: { type: 'video', src: 'videos/ai_video9.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为about07期《给明天的一句话》制作的AI视频，通过AI生成的方式创造书本在不同场景下的动态效果，让新书上线的信息出现日常生活的各个角落。该视频从创意到AI生成再到后期AE文字动态合成均由本人全流程完成。',
                 time: 'June 2025',
@@ -1211,6 +1253,7 @@
                 cover: 'images/umbrella_cover.png',
                 video: { type: 'video', src: 'videos/umbrella_video.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为LaVie雨伞制作的一支创意短片，通过3D动画展示雨伞的创意设计和品牌元素，展现趣味可爱的品牌调性。该短片从创意到静态设定再到动态制作均由本人全流程独立完成。',
                 time: 'July 2024',
@@ -1224,6 +1267,7 @@
                 cover: 'images/about4_cover4.png',
                 video: { type: 'video', src: 'videos/about4_video4.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为about04期《想开一家买手店》制作的预热短片，通过拍摄实景，进行2D实景合成的方式展现新书上线的信息。该视频从创意到实地拍摄再到2D实景合成均由本人全流程完成。',
                 time: 'May 2024',
@@ -1237,6 +1281,7 @@
                 cover: 'images/about4_cover5.png',
                 video: { type: 'video', src: 'videos/about4_video5.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为about04期《想开一家买手店》制作的预热短片，通过拍摄实景，进行2D实景合成的方式展现新书上线的信息。该视频从创意到实地拍摄再到2D实景合成均由本人全流程完成。',
                 time: 'May 2024',
@@ -1250,6 +1295,7 @@
                 cover: 'images/pop_cover.png',
                 video: { type: 'video', src: 'videos/pop_video.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为LaVie快闪活动制作的一支预告片，通过3D动画展示快闪活动的信息和展品内容，展现品牌调性。该短片从创意到静态设定再到动态制作均由本人全流程独立完成。',
                 time: 'March 2023',
@@ -1263,6 +1309,7 @@
                 cover: 'images/cd_cover.png',
                 video: { type: 'video', src: 'videos/cd_video.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [],
                 description: '该项目是为staffroom制作的一支概念片，通过3D动画展示cd的创意设计和品牌元素，展现品牌调性。该短片从创意到静态设定再到动态制作均由本人全流程独立完成。',
                 time: 'July 2023',
@@ -1276,6 +1323,7 @@
                 cover: 'images/ll_cover.png',
                 video: { type: 'video', src: 'videos/ll_video.mp4' },
                 size: 'tiny',  // 项目尺寸
+                orientation: 'portrait',  // 竖版视频
                 media: [
                     { type: 'video', src: 'videos/ll_video2.mp4' }
                 ],
@@ -1291,6 +1339,7 @@
                 cover: 'images/will_cover.png',
                 video: { type: 'video', src: 'videos/will_video.mp4' },
                 size: 'super',  // 项目尺寸
+                orientation: 'landscape',  // 横版视频
                 media: [
                     { type: 'image', src: 'images/will_image1.png' },
                     { type: 'image', src: 'images/will_image2.png' },
@@ -1308,6 +1357,7 @@
                 cover: 'images/shu_image.png',
                 video: { type: 'image', src: 'images/shu_image.png' },
                 size: 'medium',  // 项目尺寸
+                orientation: 'landscape',  // 横版（注：此项目无视频，仅图片）
                 media: [],
                 description: '该项目是为小红书制作可用于生成制作的3d手办模型。',
                 time: 'October 2023',
@@ -1321,6 +1371,7 @@
                 cover: 'images/coffee_image.png',
                 video: { type: 'image', src: 'images/coffee_image.png' },
                 size: 'medium',  // 项目尺寸
+                orientation: 'landscape',  // 横版（注：此项目无视频，仅图片）
                 media: [
                     { type: 'image', src: 'images/coffee_image1.png' }
                 ],
@@ -1698,8 +1749,19 @@
                 const hasVideo = project.video && project.video.src && project.video.type === 'video';
                 const videoClass = hasVideo ? 'has-video' : '';
                 
+                // 移动端：根据 orientation 参数添加视频方向类
+                let orientationClass = '';
+                if (isMobile && hasVideo && project.orientation) {
+                    if (project.orientation === 'landscape') {
+                        orientationClass = 'video-landscape';  // 横版 4:3
+                    } else if (project.orientation === 'portrait') {
+                        orientationClass = 'video-portrait';   // 竖版 3:4
+                    }
+                    // 'square' 或不设置则保持默认 1:1
+                }
+                
                 return `
-                    <div class="project-card size-${size} ${videoClass}" 
+                    <div class="project-card size-${size} ${videoClass} ${orientationClass}" 
                          data-project-id="${project.id}"
                          onclick="openModal(${project.id})"
                          onmouseenter="playPreview(${project.id})"
