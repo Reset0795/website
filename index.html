@@ -288,7 +288,16 @@
         .video-loading-spinner svg {
             width: 100%;
             height: 100%;
-            transform: rotate(-90deg); /* 从顶部开始 */
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
         }
         
         .video-loading-spinner .progress-bg {
@@ -302,7 +311,8 @@
             stroke: #fff;
             stroke-width: 5;
             stroke-linecap: round;
-            transition: stroke-dashoffset 0.1s ease;
+            stroke-dasharray: 20 60;
+            stroke-dashoffset: 0;
         }
 
         .project-card.has-video:hover .cover-image {
@@ -1742,7 +1752,8 @@
                 ? projects 
                 : projects.filter(p => p.category === category);
             
-            grid.innerHTML = filteredProjects.map((project, index) => {
+            // 生成HTML字符串
+            const filteredProjectsHTML = filteredProjects.map((project, index) => {
                 // 检测是否移动端
                 const isMobile = window.innerWidth < 768;
                 
@@ -1816,9 +1827,7 @@
                             <div class="video-loading-spinner">
                                 <svg viewBox="0 0 36 36">
                                     <circle class="progress-bg" cx="18" cy="18" r="15.5"></circle>
-                                    <circle class="progress-bar" cx="18" cy="18" r="15.5" 
-                                            stroke-dasharray="97.4" 
-                                            stroke-dashoffset="97.4"></circle>
+                                    <circle class="progress-bar" cx="18" cy="18" r="15.5"></circle>
                                 </svg>
                             </div>
                         </div>
@@ -1831,6 +1840,90 @@
                     </div>
                 `;
             }).join('');
+            
+            // 设置 innerHTML
+            grid.innerHTML = filteredProjectsHTML;
+            
+            // 移动端：在设置 innerHTML 后立即开始加载第一个视频（同步执行，不等待）
+            if (window.innerWidth < 768) {
+                const cardsWithVideo = grid.querySelectorAll('.project-card.has-video');
+                if (cardsWithVideo.length > 0) {
+                    const firstCard = cardsWithVideo[0];
+                    const firstVideo = firstCard.querySelector('.preview-video');
+                    if (firstVideo) {
+                        console.log('🚀 立即开始加载第一个视频（同步执行）');
+                        
+                        // 强制设置 preload="auto" 确保立即加载
+                        firstVideo.preload = 'auto';
+                        
+                        // 显示加载圆环
+                        firstCard.classList.add('video-loading');
+                        
+                        // 立即调用 load() 开始加载（多次调用确保加载）
+                        firstVideo.load();
+                        
+                        // 使用 setTimeout(0) 确保在下一个事件循环中再次调用 load()
+                        setTimeout(() => {
+                            if (firstVideo.readyState === 0) {
+                                console.log('第一个视频还未开始加载，再次调用 load()');
+                                firstVideo.load();
+                            }
+                        }, 0);
+                        
+                        // 监听加载进度（圆环现在循环旋转，不需要更新进度）
+                        const onProgress = () => {
+                            // 圆环使用CSS动画循环旋转，不再需要更新进度
+                        };
+                        
+                        // 监听视频可以播放
+                        const onCanPlay = () => {
+                            console.log('✅ 第一个视频可以播放了，立即播放');
+                            firstVideo.play().catch(err => {
+                                console.log('第一个视频播放失败（可能是自动播放策略）:', err);
+                                // 如果自动播放失败，至少确保视频已加载
+                                firstCard.classList.remove('video-loading');
+                            });
+                        };
+                        
+                        // 监听视频开始播放
+                        const onPlaying = () => {
+                            console.log('🎬 第一个视频开始播放');
+                            firstCard.classList.remove('video-loading');
+                            firstCard.classList.add('in-viewport');
+                        };
+                        
+                        // 监听 loadeddata 事件（比 canplay 更早）
+                        const onLoadedData = () => {
+                            console.log('第一个视频已加载数据，尝试播放');
+                            firstVideo.play().catch(err => {
+                                console.log('第一个视频播放失败（可能是自动播放策略）:', err);
+                            });
+                        };
+                        
+                        firstVideo.addEventListener('progress', onProgress);
+                        firstVideo.addEventListener('loadeddata', onLoadedData, { once: true });
+                        firstVideo.addEventListener('canplay', onCanPlay, { once: true });
+                        firstVideo.addEventListener('playing', onPlaying, { once: true });
+                        
+                        // 如果视频已经有足够数据，立即尝试播放
+                        if (firstVideo.readyState >= 3) {
+                            console.log('第一个视频已有足够数据，立即播放');
+                            firstVideo.play().catch(err => {
+                                console.log('第一个视频立即播放失败（可能是自动播放策略）:', err);
+                            });
+                        } else if (firstVideo.readyState >= 2) {
+                            // 如果有元数据，也尝试播放
+                            console.log('第一个视频有元数据，尝试播放');
+                            firstVideo.play().catch(err => {
+                                console.log('第一个视频播放失败（可能是自动播放策略）:', err);
+                            });
+                        }
+                        
+                        // 标记第一个视频已开始加载，防止 setupMobileVideoPlayback 干扰
+                        firstCard.setAttribute('data-first-video-loading', 'true');
+                    }
+                }
+            }
 
             // 等待DOM更新后执行瀑布流布局
             setTimeout(() => {
@@ -1971,21 +2064,9 @@
                             // 显示加载圆环
                             firstCard.classList.add('video-loading');
                             
-                            // 监听加载进度
+                            // 监听加载进度（圆环现在循环旋转，不需要更新进度）
                             const onProgress = () => {
-                                if (firstVideo.buffered.length > 0) {
-                                    const buffered = firstVideo.buffered.end(0);
-                                    const duration = firstVideo.duration;
-                                    if (duration > 0) {
-                                        const progress = (buffered / duration) * 100;
-                                        const progressBar = firstCard.querySelector('.progress-bar');
-                                        if (progressBar) {
-                                            const circumference = 2 * Math.PI * 15.5;
-                                            const offset = circumference - (progress / 100) * circumference;
-                                            progressBar.style.strokeDashoffset = offset;
-                                        }
-                                    }
-                                }
+                                // 圆环使用CSS动画循环旋转，不再需要更新进度
                             };
                             
                             // 监听视频可以播放
@@ -2502,15 +2583,10 @@
         let allProjectCards = []; // 所有项目卡片
         let loadingVideos = new Set(); // 正在加载的视频集合，避免重复加载
         
-        // 更新进度圆环
+        // 更新进度圆环（已改为循环旋转，此函数保留但不执行任何操作）
         function updateProgressRing(card, progress) {
-            const progressBar = card.querySelector('.progress-bar');
-            if (!progressBar) return;
-            
-            // 圆的周长 = 2 * PI * r，这里 r = 15.5
-            const circumference = 2 * Math.PI * 15.5; // 约 97.4
-            const offset = circumference - (progress / 100) * circumference;
-            progressBar.style.strokeDashoffset = offset;
+            // 圆环现在使用CSS动画循环旋转，不再需要更新进度
+            return;
         }
         
         // 后台加载接下来的3张图片
@@ -2585,7 +2661,7 @@
             const firstVideo = firstCard.querySelector('.preview-video');
             
             // 如果第一个视频已经在播放或正在加载，不需要重新初始化
-            if (firstVideo && (firstCard.classList.contains('video-loading') || firstCard.classList.contains('in-viewport'))) {
+            if (firstVideo && (firstCard.classList.contains('video-loading') || firstCard.classList.contains('in-viewport') || firstCard.getAttribute('data-first-video-loading') === 'true')) {
                 console.log('✅ 第一个视频已经在加载或播放，跳过初始化');
                 if (!firstVideo.paused) {
                     currentPlayingVideo = firstVideo;
@@ -2607,26 +2683,17 @@
                     currentPlayingVideo = firstVideo;
                     loadingVideos.add(firstVideo); // 标记为正在加载
                     
-                    // 显示加载圆环（初始进度0%）
-                    firstCard.classList.add('video-loading');
-                    updateProgressRing(firstCard, 0);
+                // 显示加载圆环（循环旋转）
+                firstCard.classList.add('video-loading');
                 
-                // 监听加载进度
+                // 监听加载进度（圆环现在循环旋转，不需要更新进度）
                 const onProgress = () => {
-                    if (firstVideo.buffered.length > 0) {
-                        const buffered = firstVideo.buffered.end(0);
-                        const duration = firstVideo.duration;
-                        if (duration > 0) {
-                            const progress = (buffered / duration) * 100;
-                            updateProgressRing(firstCard, progress);
-                        }
-                    }
+                    // 圆环使用CSS动画循环旋转，不再需要更新进度
                 };
                 
-                // 监听视频加载进度到100%
+                // 监听视频可以播放
                 const onCanPlay = () => {
-                    updateProgressRing(firstCard, 100);
-                    console.log('✅ 视频加载到100%，等待播放...');
+                    console.log('✅ 视频可以播放，等待播放...');
                 };
                 
                 // 监听视频真正开始播放
@@ -2862,27 +2929,18 @@
                 // 标记为正在加载
                 loadingVideos.add(topVideo.video);
                 
-                // 显示加载圆环（初始进度0%）
+                // 显示加载圆环（循环旋转）
                 topVideo.card.classList.add('video-loading');
-                updateProgressRing(topVideo.card, 0);
                 currentPlayingVideo = topVideo.video;
                 
-                // 监听加载进度
+                // 监听加载进度（圆环现在循环旋转，不需要更新进度）
                 const onProgress = () => {
-                    if (topVideo.video.buffered.length > 0) {
-                        const buffered = topVideo.video.buffered.end(0);
-                        const duration = topVideo.video.duration;
-                        if (duration > 0) {
-                            const progress = (buffered / duration) * 100;
-                            updateProgressRing(topVideo.card, progress);
-                        }
-                    }
+                    // 圆环使用CSS动画循环旋转，不再需要更新进度
                 };
                 
-                // 监听视频加载进度到100%
+                // 监听视频可以播放
                 const onCanPlay = () => {
-                    console.log('✅ 视频加载到100%，等待播放...');
-                    updateProgressRing(topVideo.card, 100);
+                    console.log('✅ 视频可以播放，等待播放...');
                 };
                 
                 // 监听视频真正开始播放
