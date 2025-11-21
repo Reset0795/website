@@ -819,11 +819,11 @@
     </div>
 
     <script>
-        // 阿里云OSS传输加速域名（解决 Chrome PNA 安全提示）
+        // 阿里云OSS传输加速域名（配置CORS后解决 Chrome PNA 问题）
         const OSS_BASE_URL = 'https://portfolio-fuwei.oss-accelerate.aliyuncs.com/';
         
-        // 备注：如果传输加速不可用，可切换回原域名
-        // const OSS_BASE_URL = 'https://portfolio-fuwei.oss-cn-shanghai.aliyuncs.com/';
+        // 备注：需在 OSS 控制台配置 CORS，添加以下暴露 Headers：
+        // Access-Control-Allow-Private-Network
         
         // 资源路径处理函数：自动拼接OSS域名
         function getResourceUrl(path) {
