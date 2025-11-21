@@ -677,14 +677,15 @@
             }
             
             .project-image {
-                height: auto !important; /* 移动端高度自适应 */
-                min-height: 200px !important; /* 确保有最小高度 */
-                padding-bottom: 0 !important;
                 width: 100vw !important; /* 移动端固定屏幕宽度 */
+                height: 0 !important;
+                padding-bottom: 100% !important; /* 1:1 正方形比例，兼顾横版和竖版 */
+                min-height: 0 !important;
                 margin: 0 !important;
                 max-width: none !important; /* 移除最大宽度限制 */
                 box-sizing: border-box !important;
                 position: relative !important; /* 确保绝对定位的子元素能正确定位 */
+                overflow: hidden !important;
             }
             
             /* 移动端保持absolute定位，封面图覆盖视频，不拼接 */
@@ -1324,36 +1325,9 @@
             // 检查是否是移动端
             const isMobile = window.innerWidth < 768;
             
-            // 尝试获取容器宽度，如果还没有渲染完成，等待一下
-            let containerWidth = imageContainer.offsetWidth;
-            if (!containerWidth) {
-                const card = imageContainer.closest('.project-card');
-                if (card) {
-                    containerWidth = card.offsetWidth;
-                }
-            }
-            
-            // 如果还是获取不到，使用默认值或延迟执行
-            if (!containerWidth) {
-                setTimeout(() => setImageContainerHeight(imageContainer, aspectRatio), 100);
-                return;
-            }
-            
-            // 移动端：所有视频（横版和竖版）都宽度占满屏幕，高度自适应，无限制
+            // 移动端：不改变容器高度，保持固定的 padding-bottom，避免布局跳动
+            // 内容通过 object-fit: contain 适应容器
             if (isMobile) {
-                const screenWidth = window.innerWidth;
-                
-                // 所有视频都使用屏幕宽度，高度根据宽高比计算，无限制
-                const containerWidth = screenWidth;
-                const containerHeight = containerWidth * aspectRatio;
-                
-                // 强制设置容器宽度和高度，使用setProperty确保覆盖CSS
-                imageContainer.style.setProperty('width', containerWidth + 'px', 'important');
-                imageContainer.style.setProperty('height', containerHeight + 'px', 'important');
-                imageContainer.style.setProperty('padding-bottom', '0', 'important');
-                imageContainer.style.setProperty('max-width', 'none', 'important');
-                
-                // 移动端使用contain模式保持原始比例，视频和图片都是100%容器尺寸
                 const coverImage = imageContainer.querySelector('img.cover-image');
                 const previewVideo = imageContainer.querySelector('video.preview-video');
                 
@@ -1367,6 +1341,22 @@
                     previewVideo.style.setProperty('width', '100%', 'important');
                     previewVideo.style.setProperty('height', '100%', 'important');
                 }
+                return;
+            }
+            
+            // 桌面端：继续使用原有逻辑
+            // 尝试获取容器宽度，如果还没有渲染完成，等待一下
+            let containerWidth = imageContainer.offsetWidth;
+            if (!containerWidth) {
+                const card = imageContainer.closest('.project-card');
+                if (card) {
+                    containerWidth = card.offsetWidth;
+                }
+            }
+            
+            // 如果还是获取不到，使用默认值或延迟执行
+            if (!containerWidth) {
+                setTimeout(() => setImageContainerHeight(imageContainer, aspectRatio), 100);
                 return;
             }
             
