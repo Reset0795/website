@@ -1395,9 +1395,22 @@
             // 检查是否是移动端
             const isMobile = window.innerWidth < 768;
             
-            // 移动端：不改变容器高度，保持固定的 padding-bottom，避免布局跳动
-            // 内容通过 object-fit: contain 适应容器
+            // 移动端：根据实际宽高比设置 padding-bottom，确保极端宽高比的视频也能正常显示
             if (isMobile) {
+                // 使用 padding-bottom 技巧来设置容器高度（基于宽度的百分比）
+                // padding-bottom 的百分比是相对于父元素的宽度计算的
+                const paddingBottomPercent = aspectRatio * 100;
+                
+                // 确保 padding-bottom 在合理范围内（避免极端值）
+                // 对于极端宽高比的视频，限制在 20% 到 200% 之间
+                const minPadding = 20; // 对应非常宽的横版视频（如21:9）
+                const maxPadding = 200; // 对应非常高的竖版视频
+                const clampedPadding = Math.max(minPadding, Math.min(maxPadding, paddingBottomPercent));
+                
+                // 设置容器的 padding-bottom（使用 !important 覆盖CSS中的固定值）
+                imageContainer.style.setProperty('padding-bottom', clampedPadding + '%', 'important');
+                imageContainer.style.setProperty('height', '0', 'important'); // 使用 padding-bottom 技巧时，height 设为 0
+                
                 const coverImage = imageContainer.querySelector('img.cover-image');
                 const previewVideo = imageContainer.querySelector('video.preview-video');
                 
@@ -1818,18 +1831,36 @@
                 
                 // 优先使用视频的实际宽高比
                 if (previewVideo) {
+                    // 移动端：如果 preload="none"，需要主动加载元数据
+                    const isMobile = window.innerWidth < 768;
+                    if (isMobile && previewVideo.preload === 'none' && previewVideo.readyState === 0) {
+                        // 主动加载视频元数据（不加载完整视频，只加载元数据）
+                        previewVideo.load();
+                    }
+                    
                     if (previewVideo.readyState >= 2 && previewVideo.videoWidth && previewVideo.videoHeight) {
                         // 视频已加载，直接使用视频比例
                         updateVideoAspectRatio(previewVideo);
                         aspectRatioSet = true;
                     } else {
                         // 等待视频元数据加载
-                        previewVideo.addEventListener('loadedmetadata', () => {
+                        const onLoadedMetadata = () => {
                             if (previewVideo.videoWidth && previewVideo.videoHeight) {
                                 updateVideoAspectRatio(previewVideo);
                                 aspectRatioSet = true;
                             }
-                        }, { once: true });
+                        };
+                        previewVideo.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
+                        
+                        // 如果视频已经有元数据但事件还没触发，也尝试更新
+                        if (previewVideo.readyState >= 1) {
+                            setTimeout(() => {
+                                if (!aspectRatioSet && previewVideo.videoWidth && previewVideo.videoHeight) {
+                                    updateVideoAspectRatio(previewVideo);
+                                    aspectRatioSet = true;
+                                }
+                            }, 100);
+                        }
                         previewVideo.addEventListener('error', () => {
                             // 视频加载失败，尝试使用封面图的实际比例
                             if (coverImage && coverImage.src) {
