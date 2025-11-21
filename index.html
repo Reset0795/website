@@ -2366,13 +2366,18 @@
                 });
             }
             
-            // 检测视频是否完全在屏幕中
-            function isFullyVisible(card) {
+            // 检测视频是否大部分可见（80%以上）
+            function isMostlyVisible(card) {
                 const rect = card.getBoundingClientRect();
                 const viewportHeight = window.innerHeight;
                 
-                // 视频的顶部和底部都在视口内，说明完全可见
-                return rect.top >= 0 && rect.bottom <= viewportHeight;
+                // 计算卡片在视口中的可见高度
+                const visibleTop = Math.max(0, rect.top);
+                const visibleBottom = Math.min(viewportHeight, rect.bottom);
+                const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+                
+                // 如果可见高度大于等于卡片高度的80%，说明大部分可见
+                return visibleHeight >= rect.height * 0.8;
             }
             
             // 检测视频是否有一半离开屏幕
@@ -2389,7 +2394,7 @@
                 return visibleHeight < rect.height / 2;
             }
             
-            // 查找并播放完全可见的视频
+            // 查找并播放大部分可见的视频
             function playVideoInCenter() {
                 // 先检查当前播放的视频是否已经有一半离开屏幕
                 if (currentPlayingVideo) {
@@ -2401,16 +2406,21 @@
                         currentCard.classList.remove('in-viewport');
                         currentCard.classList.remove('video-loading');
                         currentPlayingVideo = null;
+                        console.log('⏸️ 视频离开屏幕，已暂停');
                     }
                 }
                 
-                // 查找完全在屏幕中的视频并播放
+                // 查找大部分可见（80%以上）的视频并播放
+                let foundVisibleVideo = false;
                 for (let card of cardsWithVideo) {
-                    if (isFullyVisible(card)) {
+                    if (isMostlyVisible(card)) {
+                        foundVisibleVideo = true;
                         const video = card.querySelector('.preview-video');
                         
                         // 如果当前视频不是正在播放的视频
                         if (video && video !== currentPlayingVideo) {
+                            console.log('🎬 检测到新视频大部分可见，开始加载');
+                            
                             // 暂停之前的视频
                             if (currentPlayingVideo) {
                                 currentPlayingVideo.pause();
@@ -2441,13 +2451,14 @@
                             
                             // 监听视频加载完成
                             const onCanPlay = () => {
+                                console.log('✅ 视频加载完成，准备播放');
                                 updateProgressRing(card, 100);
                                 setTimeout(() => {
                                     card.classList.remove('video-loading');
                                     card.classList.add('in-viewport');
                                     
                                     // 每次视频加载完成后，继续加载后续3张图片
-                                    console.log('🎬 视频加载完成，继续后台加载后续图片');
+                                    console.log('📸 开始后台加载后续图片');
                                     loadNextImages();
                                 }, 200); // 显示完整圆环200ms后再隐藏
                             };
@@ -2466,36 +2477,53 @@
                         break; // 只播放一个视频
                     }
                 }
+                
+                if (!foundVisibleVideo) {
+                    console.log('ℹ️ 没有找到大部分可见（80%以上）的视频');
+                }
             }
             
-            // 监听滚动事件
+            // 监听滚动事件（优化：减少频繁触发）
             let scrollTimeout;
+            let lastScrollCheck = 0;
             const handleScroll = () => {
-                // 滚动时立即检查当前视频是否有一半离开屏幕
-                if (currentPlayingVideo) {
-                    const currentCard = currentPlayingVideo.closest('.project-card');
-                    if (currentCard && isHalfOutOfView(currentCard)) {
-                        // 有一半离开屏幕，立即暂停
-                        currentPlayingVideo.pause();
-                        currentPlayingVideo.currentTime = 0;
-                        currentCard.classList.remove('in-viewport');
-                        currentCard.classList.remove('video-loading');
-                        currentPlayingVideo = null;
+                const now = Date.now();
+                
+                // 节流：每100ms最多检查一次暂停逻辑
+                if (now - lastScrollCheck > 100) {
+                    lastScrollCheck = now;
+                    
+                    // 检查当前视频是否有一半离开屏幕
+                    if (currentPlayingVideo) {
+                        const currentCard = currentPlayingVideo.closest('.project-card');
+                        if (currentCard && isHalfOutOfView(currentCard)) {
+                            // 有一半离开屏幕，暂停
+                            currentPlayingVideo.pause();
+                            currentPlayingVideo.currentTime = 0;
+                            currentCard.classList.remove('in-viewport');
+                            currentCard.classList.remove('video-loading');
+                            currentPlayingVideo = null;
+                            console.log('⏸️ 滚动中检测到视频离开，已暂停');
+                        }
                     }
                 }
                 
-                // 滚动停止后检查并播放完全可见的视频
+                // 滚动停止300ms后检查并播放大部分可见的视频
                 clearTimeout(scrollTimeout);
                 scrollTimeout = setTimeout(() => {
+                    console.log('🔍 滚动停止，检查可播放视频');
                     playVideoInCenter();
-                }, 150);
+                }, 300);
             };
             
             window.addEventListener('scroll', handleScroll, { passive: true });
             
             // 也监听scrollend事件（如果支持）
             if ('onscrollend' in window) {
-                window.addEventListener('scrollend', playVideoInCenter, { passive: true });
+                window.addEventListener('scrollend', () => {
+                    console.log('🔍 滚动结束事件触发');
+                    playVideoInCenter();
+                }, { passive: true });
             }
         }
         
