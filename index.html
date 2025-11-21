@@ -2233,6 +2233,7 @@
         let videoObserver = null;
         let nextImageIndexToLoad = 1; // 下一个要加载的图片索引（第一个已经自动加载了）
         let allProjectCards = []; // 所有项目卡片
+        let loadingVideos = new Set(); // 正在加载的视频集合，避免重复加载
         
         // 更新进度圆环
         function updateProgressRing(card, progress) {
@@ -2325,6 +2326,7 @@
             const firstVideo = firstCard.querySelector('.preview-video');
             if (firstVideo) {
                 currentPlayingVideo = firstVideo;
+                loadingVideos.add(firstVideo); // 标记为正在加载
                 
                 // 显示加载圆环（初始进度0%）
                 firstCard.classList.add('video-loading');
@@ -2350,9 +2352,10 @@
                 
                 // 监听视频真正开始播放
                 const onPlaying = () => {
-                    console.log('🎬 视频开始播放，隐藏圆环');
+                    console.log('🎬 第一个视频开始播放，隐藏圆环');
                     firstCard.classList.remove('video-loading');
                     firstCard.classList.add('in-viewport');
+                    loadingVideos.delete(firstVideo); // 移除加载标记
                     
                     // 第一个视频开始播放后，加载后续3张图片
                     console.log('📸 开始后台加载后续图片');
@@ -2361,8 +2364,9 @@
                 
                 // 监听错误
                 const onError = () => {
-                    console.log('❌ 视频加载错误');
+                    console.log('❌ 第一个视频加载错误');
                     firstCard.classList.remove('video-loading');
+                    loadingVideos.delete(firstVideo); // 移除加载标记
                 };
                 
                 firstVideo.addEventListener('progress', onProgress);
@@ -2373,8 +2377,9 @@
                 // 超时保护：15秒后如果还没播放，强制隐藏圆环
                 setTimeout(() => {
                     if (firstCard.classList.contains('video-loading')) {
-                        console.log('⏱️ 视频加载超时，隐藏圆环');
+                        console.log('⏱️ 第一个视频加载超时，隐藏圆环');
                         firstCard.classList.remove('video-loading');
+                        loadingVideos.delete(firstVideo); // 移除加载标记
                     }
                 }, 15000);
                 
@@ -2386,7 +2391,7 @@
                 });
             }
             
-            // 检测视频是否大部分可见（80%以上）
+            // 检测视频是否大部分可见（70%以上）
             function isMostlyVisible(card) {
                 const rect = card.getBoundingClientRect();
                 const viewportHeight = window.innerHeight;
@@ -2396,8 +2401,23 @@
                 const visibleBottom = Math.min(viewportHeight, rect.bottom);
                 const visibleHeight = Math.max(0, visibleBottom - visibleTop);
                 
-                // 如果可见高度大于等于卡片高度的80%，说明大部分可见
-                return visibleHeight >= rect.height * 0.8;
+                // 计算可见比例
+                const visibleRatio = visibleHeight / rect.height;
+                const isMostlyVisible = visibleRatio >= 0.7;
+                
+                // 只在大部分可见时输出日志
+                if (isMostlyVisible) {
+                    console.log(`✅ 找到大部分可见的视频:`, {
+                        卡片高度: rect.height.toFixed(0) + 'px',
+                        可见高度: visibleHeight.toFixed(0) + 'px',
+                        可见比例: (visibleRatio * 100).toFixed(1) + '%',
+                        top: rect.top.toFixed(0),
+                        bottom: rect.bottom.toFixed(0)
+                    });
+                }
+                
+                // 如果可见高度大于等于卡片高度的70%，说明大部分可见
+                return isMostlyVisible;
             }
             
             // 检测视频是否有一半离开屏幕
@@ -2430,16 +2450,19 @@
                     }
                 }
                 
-                // 查找大部分可见（80%以上）的视频并播放
+                // 查找大部分可见（70%以上）的视频并播放
                 let foundVisibleVideo = false;
                 for (let card of cardsWithVideo) {
                     if (isMostlyVisible(card)) {
                         foundVisibleVideo = true;
                         const video = card.querySelector('.preview-video');
                         
-                        // 如果当前视频不是正在播放的视频
-                        if (video && video !== currentPlayingVideo) {
+                        // 检查是否已经在加载或播放
+                        if (video && video !== currentPlayingVideo && !loadingVideos.has(video)) {
                             console.log('🎬 检测到新视频大部分可见，开始加载');
+                            
+                            // 标记为正在加载
+                            loadingVideos.add(video);
                             
                             // 暂停之前的视频
                             if (currentPlayingVideo) {
@@ -2480,6 +2503,7 @@
                                 console.log('🎬 视频开始播放，隐藏圆环');
                                 card.classList.remove('video-loading');
                                 card.classList.add('in-viewport');
+                                loadingVideos.delete(video); // 移除加载标记
                                 
                                 // 每次视频开始播放后，继续加载后续3张图片
                                 console.log('📸 开始后台加载后续图片');
@@ -2490,6 +2514,7 @@
                             const onError = () => {
                                 console.log('❌ 视频加载错误');
                                 card.classList.remove('video-loading');
+                                loadingVideos.delete(video); // 移除加载标记
                             };
                             
                             video.addEventListener('progress', onProgress);
@@ -2502,6 +2527,7 @@
                                 if (card.classList.contains('video-loading')) {
                                     console.log('⏱️ 视频加载超时，隐藏圆环');
                                     card.classList.remove('video-loading');
+                                    loadingVideos.delete(video); // 移除加载标记
                                 }
                             }, 15000);
                             
@@ -2517,19 +2543,21 @@
                     }
                 }
                 
-                if (!foundVisibleVideo) {
-                    console.log('ℹ️ 没有找到大部分可见（80%以上）的视频');
-                }
+                // 移除不必要的日志，避免刷屏
+                // if (!foundVisibleVideo) {
+                //     console.log('ℹ️ 没有找到大部分可见（70%以上）的视频');
+                // }
             }
             
             // 监听滚动事件（优化：减少频繁触发）
             let scrollTimeout;
             let lastScrollCheck = 0;
+            let isChecking = false; // 防止重复检查
             const handleScroll = () => {
                 const now = Date.now();
                 
-                // 节流：每100ms最多检查一次暂停逻辑
-                if (now - lastScrollCheck > 100) {
+                // 节流：每200ms最多检查一次暂停逻辑
+                if (now - lastScrollCheck > 200) {
                     lastScrollCheck = now;
                     
                     // 检查当前视频是否有一半离开屏幕
@@ -2541,18 +2569,25 @@
                             currentPlayingVideo.currentTime = 0;
                             currentCard.classList.remove('in-viewport');
                             currentCard.classList.remove('video-loading');
+                            loadingVideos.delete(currentPlayingVideo); // 移除加载标记
                             currentPlayingVideo = null;
                             console.log('⏸️ 滚动中检测到视频离开，已暂停');
                         }
                     }
                 }
                 
-                // 滚动停止300ms后检查并播放大部分可见的视频
+                // 滚动停止500ms后检查并播放大部分可见的视频
                 clearTimeout(scrollTimeout);
                 scrollTimeout = setTimeout(() => {
+                    if (isChecking) {
+                        console.log('⚠️ 正在检查中，跳过重复检查');
+                        return;
+                    }
+                    isChecking = true;
                     console.log('🔍 滚动停止，检查可播放视频');
                     playVideoInCenter();
-                }, 300);
+                    isChecking = false;
+                }, 500);
             };
             
             window.addEventListener('scroll', handleScroll, { passive: true });
@@ -2560,8 +2595,14 @@
             // 也监听scrollend事件（如果支持）
             if ('onscrollend' in window) {
                 window.addEventListener('scrollend', () => {
-                    console.log('🔍 滚动结束事件触发');
+                    if (isChecking) {
+                        console.log('⚠️ scrollend: 正在检查中，跳过');
+                        return;
+                    }
+                    isChecking = true;
+                    console.log('🔍 scrollend事件触发，检查可播放视频');
                     playVideoInCenter();
+                    isChecking = false;
                 }, { passive: true });
             }
         }
