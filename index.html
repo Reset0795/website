@@ -652,8 +652,8 @@
                 z-index: 1;
             }
             
-            /* 移动端：当项目进入视口时，隐藏封面图显示视频 */
-            .project-card.has-video.in-viewport .cover-image {
+            /* 移动端：当视频开始播放时，隐藏封面图显示视频 */
+            .project-card.has-video.video-playing .cover-image {
                 opacity: 0;
             }
 
@@ -1589,8 +1589,8 @@
                 let previewVideoHTML = '';
                 if (project.video && project.video.src) {
                     if (project.video.type === 'video') {
-                        // 本地视频
-                        previewVideoHTML = `<video src="${project.video.src}" class="preview-video" loop muted playsinline></video>`;
+                        // 本地视频 - 移动端使用metadata预加载,桌面端不预加载
+                        previewVideoHTML = `<video src="${project.video.src}" class="preview-video" loop muted playsinline preload="metadata"></video>`;
                     } else if (project.video.type === 'youtube') {
                         // YouTube 不支持悬停预览，使用封面
                         previewVideoHTML = '';
@@ -1729,8 +1729,11 @@
             setTimeout(() => layoutMasonry(), 100);
         }
 
-        // 播放预览视频
+        // 播放预览视频(桌面端hover)
         function playPreview(projectId) {
+            // 只在桌面端启用hover播放
+            if (window.innerWidth < 768) return;
+            
             const card = document.querySelector(`[data-project-id="${projectId}"]`);
             if (!card) return;
             
@@ -1744,8 +1747,11 @@
             // 如果没有视频元素，不执行任何操作（封面图会保持显示）
         }
 
-        // 暂停预览视频
+        // 暂停预览视频(桌面端hover)
         function pausePreview(projectId) {
+            // 只在桌面端启用hover暂停
+            if (window.innerWidth < 768) return;
+            
             const card = document.querySelector(`[data-project-id="${projectId}"]`);
             if (!card) return;
             
@@ -2145,11 +2151,11 @@
         });
 
         // 移动端滚动监听：当项目进入视口时自动播放视频
-        // 移动端视频播放控制
+        // 移动端视频预加载和播放控制
         let currentPlayingVideo = null;
-        let playTimeout = null;
-        let videoObservers = new Map(); // 存储每个视频的定时器
-        let currentVideoObserver = null; // 当前的 IntersectionObserver
+        let videoLoadingStates = new Map(); // 存储视频加载状态
+        let preloadObserver = null; // 预加载观察器
+        let playObserver = null; // 播放观察器
         
         function pauseAllVideos() {
             // 暂停所有正在播放的视频
@@ -2163,152 +2169,217 @@
             currentPlayingVideo = null;
         }
         
-        function setupScrollVideoPlayback() {
+        function isVideoReadyToPlay(video) {
+            // 检查视频是否已经加载足够可以播放
+            // readyState: 0=未加载, 1=元数据已加载, 2=当前帧已加载, 3=足够播放, 4=全部加载
+            return video && video.readyState >= 3;
+        }
+        
+        function preloadVideo(video) {
+            // 开始预加载视频
+            if (!video || videoLoadingStates.get(video) === 'loading') {
+                return; // 已在加载中
+            }
+            
+            videoLoadingStates.set(video, 'loading');
+            
+            // 设置预加载
+            video.preload = 'auto';
+            video.load();
+            
+            // 监听加载完成事件
+            const onCanPlay = () => {
+                videoLoadingStates.set(video, 'ready');
+                console.log('视频预加载完成:', video.src);
+            };
+            
+            const onError = () => {
+                videoLoadingStates.set(video, 'error');
+                console.error('视频加载失败:', video.src);
+            };
+            
+            video.addEventListener('canplaythrough', onCanPlay, { once: true });
+            video.addEventListener('error', onError, { once: true });
+        }
+        
+        function setupMobileVideoSystem() {
             // 只在移动端启用
             if (window.innerWidth >= 768) return;
             
             // 清理之前的观察器
-            if (currentVideoObserver) {
-                currentVideoObserver.disconnect();
-                currentVideoObserver = null;
+            if (preloadObserver) {
+                preloadObserver.disconnect();
+                preloadObserver = null;
             }
-            videoObservers.forEach((cardData, card) => {
-                if (cardData.timeout) {
-                    clearTimeout(cardData.timeout);
-                }
-            });
-            videoObservers.clear();
-            pauseAllVideos();
+            if (playObserver) {
+                playObserver.disconnect();
+                playObserver = null;
+            }
             
-            // 定义中心区域：视口中心40%的区域
-            const viewportHeight = window.innerHeight;
-            const centerMargin = viewportHeight * 0.3; // 上下各30%，中间40%为中心区域
-            const observerOptions = {
+            pauseAllVideos();
+            videoLoadingStates.clear();
+            
+            const cardsWithVideo = document.querySelectorAll('.project-card.has-video');
+            if (cardsWithVideo.length === 0) return;
+            
+            // 1. 立即预加载第一个视频
+            const firstCard = cardsWithVideo[0];
+            const firstVideo = firstCard.querySelector('.preview-video');
+            if (firstVideo) {
+                console.log('开始预加载第一个视频');
+                preloadVideo(firstVideo);
+            }
+            
+            // 2. 预加载观察器 - 当视频即将进入视口时开始预加载
+            const preloadOptions = {
                 root: null,
-                rootMargin: `-${centerMargin}px 0px -${centerMargin}px 0px`, // 只检测中心区域
-                threshold: 0.5 // 当项目50%进入中心区域时触发
+                rootMargin: '200px', // 提前200px开始预加载
+                threshold: 0
             };
             
-            const observer = new IntersectionObserver((entries) => {
+            preloadObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const card = entry.target;
+                        const video = card.querySelector('.preview-video');
+                        if (video && !videoLoadingStates.has(video)) {
+                            console.log('提前预加载视频');
+                            preloadVideo(video);
+                        }
+                    }
+                });
+            }, preloadOptions);
+            
+            // 3. 播放观察器 - 当视频在屏幕中央时播放(如果已加载完成)
+            const viewportHeight = window.innerHeight;
+            const centerMargin = viewportHeight * 0.3; // 上下各30%，中间40%为中心区域
+            const playOptions = {
+                root: null,
+                rootMargin: `-${centerMargin}px 0px -${centerMargin}px 0px`,
+                threshold: 0.5
+            };
+            
+            playObserver = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     const card = entry.target;
                     const video = card.querySelector('.preview-video');
+                    const coverImage = card.querySelector('.cover-image');
                     
                     if (!video) return;
                     
-                    // 获取或创建该卡片的观察数据
-                    let cardData = videoObservers.get(card);
-                    if (!cardData) {
-                        cardData = { timeout: null };
-                        videoObservers.set(card, cardData);
-                    }
-                    
                     if (entry.isIntersecting) {
-                        // 项目进入中心区域
-                        card.classList.add('in-viewport');
+                        // 视频进入中心区域
                         
-                        // 清除之前的定时器
-                        if (cardData.timeout) {
-                            clearTimeout(cardData.timeout);
-                            cardData.timeout = null;
-                        }
-                        
-                        // 设置1秒延迟播放
-                        cardData.timeout = setTimeout(() => {
-                            // 检查是否仍在中心区域（防止快速滚动）
-                            const rect = card.getBoundingClientRect();
-                            const viewportCenter = viewportHeight / 2;
-                            const cardCenter = rect.top + rect.height / 2;
-                            const distanceFromCenter = Math.abs(cardCenter - viewportCenter);
-                            const centerThreshold = viewportHeight * 0.2; // 中心20%范围内
+                        // 检查视频是否已加载完成
+                        if (isVideoReadyToPlay(video)) {
+                            // 视频已加载完成，可以播放
                             
-                            if (distanceFromCenter <= centerThreshold && entry.isIntersecting) {
-                                // 暂停所有其他视频
-                                pauseAllVideos();
-                                
-                                // 播放当前视频
-                                currentPlayingVideo = video;
-                                video.play().catch(err => {
-                                    console.log('Video play failed:', err);
-                                    currentPlayingVideo = null;
-                                });
+                            // 暂停其他视频
+                            if (currentPlayingVideo && currentPlayingVideo !== video) {
+                                currentPlayingVideo.pause();
+                                currentPlayingVideo.currentTime = 0;
+                                // 恢复其他视频的封面图
+                                const otherCard = currentPlayingVideo.closest('.project-card');
+                                if (otherCard) {
+                                    otherCard.classList.remove('video-playing');
+                                }
                             }
                             
-                            cardData.timeout = null;
-                        }, 1000); // 1秒延迟
-                        
-                    } else {
-                        // 项目离开中心区域
-                        card.classList.remove('in-viewport');
-                        
-                        // 清除定时器
-                        if (cardData.timeout) {
-                            clearTimeout(cardData.timeout);
-                            cardData.timeout = null;
+                            // 隐藏封面图并播放视频
+                            card.classList.add('video-playing');
+                            currentPlayingVideo = video;
+                            
+                            video.play().catch(err => {
+                                console.log('视频播放失败:', err);
+                                // 播放失败，恢复封面图
+                                card.classList.remove('video-playing');
+                                currentPlayingVideo = null;
+                            });
+                            
+                        } else {
+                            // 视频还未加载完成，保持封面图显示
+                            console.log('视频尚未加载完成，保持封面图显示');
+                            
+                            // 如果视频还没开始加载，立即开始加载
+                            if (!videoLoadingStates.has(video)) {
+                                preloadVideo(video);
+                            }
+                            
+                            // 等待视频加载完成后自动播放
+                            const waitForLoad = () => {
+                                if (isVideoReadyToPlay(video)) {
+                                    // 检查视频是否仍在中心区域
+                                    const rect = card.getBoundingClientRect();
+                                    const viewportCenter = viewportHeight / 2;
+                                    const cardCenter = rect.top + rect.height / 2;
+                                    const distanceFromCenter = Math.abs(cardCenter - viewportCenter);
+                                    const centerThreshold = viewportHeight * 0.2;
+                                    
+                                    if (distanceFromCenter <= centerThreshold) {
+                                        // 仍在中心区域，播放视频
+                                        if (currentPlayingVideo && currentPlayingVideo !== video) {
+                                            currentPlayingVideo.pause();
+                                            currentPlayingVideo.currentTime = 0;
+                                            const otherCard = currentPlayingVideo.closest('.project-card');
+                                            if (otherCard) {
+                                                otherCard.classList.remove('video-playing');
+                                            }
+                                        }
+                                        
+                                        card.classList.add('video-playing');
+                                        currentPlayingVideo = video;
+                                        video.play().catch(err => {
+                                            console.log('视频播放失败:', err);
+                                            card.classList.remove('video-playing');
+                                            currentPlayingVideo = null;
+                                        });
+                                    }
+                                } else {
+                                    // 继续等待
+                                    setTimeout(waitForLoad, 100);
+                                }
+                            };
+                            
+                            waitForLoad();
                         }
                         
-                        // 如果是当前播放的视频，暂停它
+                    } else {
+                        // 视频离开中心区域
+                        
+                        // 如果是当前播放的视频，暂停并恢复封面图
                         if (video === currentPlayingVideo) {
                             video.pause();
                             video.currentTime = 0;
+                            card.classList.remove('video-playing');
                             currentPlayingVideo = null;
                         }
                     }
                 });
-            }, observerOptions);
+            }, playOptions);
             
-            // 观察所有有视频的项目卡片
-            const cardsWithVideo = document.querySelectorAll('.project-card.has-video');
+            // 为所有视频卡片添加观察
             cardsWithVideo.forEach(card => {
-                const video = card.querySelector('.preview-video');
-                if (video) {
-                    observer.observe(card);
-                    videoObservers.set(card, { timeout: null });
-                }
+                preloadObserver.observe(card);
+                playObserver.observe(card);
             });
-            
-            // 保存 observer 引用以便后续清理
-            currentVideoObserver = observer;
         }
         
-        // 在项目渲染后设置滚动监听
+        // 在项目渲染后设置视频系统
         const originalRenderProjects = renderProjects;
         renderProjects = function(category) {
             originalRenderProjects(category);
             // 延迟一下，确保DOM已更新
             setTimeout(() => {
-                setupScrollVideoPlayback();
+                setupMobileVideoSystem();
             }, 100);
         };
         
         // 窗口大小改变时重新设置
         window.addEventListener('resize', () => {
             setTimeout(() => {
-                setupScrollVideoPlayback();
+                setupMobileVideoSystem();
             }, 100);
         });
-        
-        // 快速滚动时取消所有待播放的定时器
-        let scrollTimeout = null;
-        window.addEventListener('scroll', () => {
-            // 如果正在快速滚动，取消所有待播放的定时器
-            if (scrollTimeout) {
-                clearTimeout(scrollTimeout);
-            }
-            
-            // 标记正在滚动
-            scrollTimeout = setTimeout(() => {
-                scrollTimeout = null;
-            }, 100);
-            
-            // 取消所有待播放的定时器
-            videoObservers.forEach((cardData, card) => {
-                if (cardData.timeout) {
-                    clearTimeout(cardData.timeout);
-                    cardData.timeout = null;
-                }
-            });
-        }, { passive: true });
 
         // 初始化渲染 - 默认显示All页面
         renderProjects('all');
