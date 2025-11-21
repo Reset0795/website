@@ -1951,16 +1951,22 @@
             // 确保布局执行
             setTimeout(() => layoutMasonry(), 100);
             
-            // 移动端：立即开始加载第一个视频（不等待setupMobileVideoPlayback）
+            // 移动端：立即开始加载第一个视频（不等待任何延迟）
             if (window.innerWidth < 768) {
-                setTimeout(() => {
+                // 使用 requestAnimationFrame 确保 DOM 已插入，但立即执行
+                requestAnimationFrame(() => {
                     const cardsWithVideo = grid.querySelectorAll('.project-card.has-video');
                     if (cardsWithVideo.length > 0) {
                         const firstCard = cardsWithVideo[0];
                         const firstVideo = firstCard.querySelector('.preview-video');
-                        if (firstVideo && firstVideo.preload === 'auto') {
-                            // 第一个视频已经设置了preload="auto"，确保它立即开始加载和播放
-                            console.log('🚀 立即开始加载第一个视频');
+                        if (firstVideo) {
+                            console.log('🚀 立即开始加载第一个视频，preload:', firstVideo.preload);
+                            
+                            // 强制设置 preload="auto" 确保立即加载
+                            firstVideo.preload = 'auto';
+                            
+                            // 立即调用 load() 开始加载（即使 preload="auto" 也可能需要）
+                            firstVideo.load();
                             
                             // 显示加载圆环
                             firstCard.classList.add('video-loading');
@@ -1984,7 +1990,7 @@
                             
                             // 监听视频可以播放
                             const onCanPlay = () => {
-                                console.log('✅ 第一个视频可以播放了');
+                                console.log('✅ 第一个视频可以播放了，立即播放');
                                 firstVideo.play().catch(err => {
                                     console.log('第一个视频播放失败:', err);
                                 });
@@ -2003,13 +2009,17 @@
                             
                             // 如果视频已经有足够数据，立即尝试播放
                             if (firstVideo.readyState >= 3) {
+                                console.log('第一个视频已有足够数据，立即播放');
                                 firstVideo.play().catch(err => {
                                     console.log('第一个视频立即播放失败:', err);
                                 });
+                            } else if (firstVideo.readyState >= 2) {
+                                // 如果有元数据，也尝试播放
+                                console.log('第一个视频有元数据，等待canplay事件');
                             }
                         }
                     }
-                }, 50); // 很短的延迟，确保DOM已插入
+                });
             }
         }
 
@@ -2574,10 +2584,12 @@
             const firstCard = cardsWithVideo[0];
             const firstVideo = firstCard.querySelector('.preview-video');
             
-            // 如果第一个视频已经在播放，不需要重新初始化
-            if (firstVideo && !firstVideo.paused && firstCard.classList.contains('in-viewport')) {
-                console.log('✅ 第一个视频已经在播放，跳过初始化');
-                currentPlayingVideo = firstVideo;
+            // 如果第一个视频已经在播放或正在加载，不需要重新初始化
+            if (firstVideo && (firstCard.classList.contains('video-loading') || firstCard.classList.contains('in-viewport'))) {
+                console.log('✅ 第一个视频已经在加载或播放，跳过初始化');
+                if (!firstVideo.paused) {
+                    currentPlayingVideo = firstVideo;
+                }
                 // 只设置滚动监听，不重新加载视频
             } else if (firstVideo) {
                 // 暂停所有其他视频（除了第一个）
