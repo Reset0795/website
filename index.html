@@ -1844,7 +1844,7 @@
             // 设置 innerHTML
             grid.innerHTML = filteredProjectsHTML;
             
-            // 移动端：在设置 innerHTML 后立即开始加载第一个视频（同步执行，不等待）
+            // 移动端：在设置 innerHTML 后立即开始加载第一个视频（使用和其他视频相同的机制）
             if (window.innerWidth < 768) {
                 // 使用 requestAnimationFrame 确保 DOM 已完全插入
                 requestAnimationFrame(() => {
@@ -1853,99 +1853,74 @@
                         const firstCard = cardsWithVideo[0];
                         const firstVideo = firstCard.querySelector('.preview-video');
                         if (firstVideo) {
-                            console.log('🚀 立即开始加载第一个视频');
+                            console.log('🚀 立即开始加载第一个视频（使用和其他视频相同的机制）');
                             
-                            // 强制设置 preload="auto" 确保立即加载
-                            firstVideo.preload = 'auto';
+                            // 标记为正在加载
+                            loadingVideos.add(firstVideo);
                             
-                            // 显示加载圆环
+                            // 显示加载圆环（循环旋转）
                             firstCard.classList.add('video-loading');
-                            
-                            // 立即调用 load() 开始加载（多次调用确保加载）
-                            firstVideo.load();
-                            
-                            // 立即再次调用 load()（不等待）
-                            setTimeout(() => {
-                                firstVideo.load();
-                                console.log('第一个视频：再次调用 load()');
-                            }, 0);
-                            
-                            // 更早地尝试播放：监听 loadedmetadata 事件
-                            const onLoadedMetadata = () => {
-                                console.log('第一个视频元数据已加载，立即尝试播放');
-                                firstVideo.play().catch(err => {
-                                    console.log('第一个视频播放失败（loadedmetadata）:', err);
-                                });
-                            };
-                            
-                            // 监听 loadeddata 事件（比 canplay 更早）
-                            const onLoadedData = () => {
-                                console.log('第一个视频已加载数据，尝试播放');
-                                firstVideo.play().catch(err => {
-                                    console.log('第一个视频播放失败（loadeddata）:', err);
-                                });
-                            };
-                            
-                            // 监听视频可以播放
-                            const onCanPlay = () => {
-                                console.log('✅ 第一个视频可以播放了，立即播放');
-                                firstVideo.play().catch(err => {
-                                    console.log('第一个视频播放失败（canplay）:', err);
-                                    // 如果自动播放失败，至少确保视频已加载
-                                    firstCard.classList.remove('video-loading');
-                                });
-                            };
-                            
-                            // 监听视频开始播放
-                            const onPlaying = () => {
-                                console.log('🎬 第一个视频开始播放');
-                                firstCard.classList.remove('video-loading');
-                                firstCard.classList.add('in-viewport');
-                            };
+                            currentPlayingVideo = firstVideo;
                             
                             // 监听加载进度（圆环现在循环旋转，不需要更新进度）
                             const onProgress = () => {
                                 // 圆环使用CSS动画循环旋转，不再需要更新进度
                             };
                             
-                            // 添加所有事件监听器
-                            firstVideo.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
-                            firstVideo.addEventListener('loadeddata', onLoadedData, { once: true });
-                            firstVideo.addEventListener('canplay', onCanPlay, { once: true });
-                            firstVideo.addEventListener('canplaythrough', () => {
-                                console.log('第一个视频可以流畅播放，尝试播放');
-                                firstVideo.play().catch(err => {
-                                    console.log('第一个视频播放失败（canplaythrough）:', err);
-                                });
-                            }, { once: true });
-                            firstVideo.addEventListener('playing', onPlaying, { once: true });
-                            firstVideo.addEventListener('progress', onProgress);
+                            // 监听视频可以播放
+                            const onCanPlay = () => {
+                                console.log('✅ 第一个视频可以播放，等待播放...');
+                            };
                             
-                            // 如果视频已经有足够数据，立即尝试播放
-                            if (firstVideo.readyState >= 3) {
-                                console.log('第一个视频已有足够数据（readyState >= 3），立即播放');
-                                firstVideo.play().catch(err => {
-                                    console.log('第一个视频立即播放失败:', err);
-                                });
-                            } else if (firstVideo.readyState >= 2) {
-                                // 如果有元数据，也尝试播放
-                                console.log('第一个视频有元数据（readyState >= 2），尝试播放');
-                                firstVideo.play().catch(err => {
-                                    console.log('第一个视频播放失败:', err);
-                                });
-                            } else if (firstVideo.readyState >= 1) {
-                                // 即使只有框架信息，也尝试播放
-                                console.log('第一个视频有框架信息（readyState >= 1），尝试播放');
-                                firstVideo.play().catch(err => {
-                                    console.log('第一个视频播放失败:', err);
-                                });
-                            } else {
-                                // 即使 readyState === 0，也尝试播放（浏览器会自动等待加载）
-                                console.log('第一个视频 readyState === 0，尝试播放（浏览器会自动等待）');
-                                firstVideo.play().catch(err => {
-                                    console.log('第一个视频播放失败:', err);
-                                });
-                            }
+                            // 监听视频真正开始播放
+                            const onPlaying = () => {
+                                console.log('🎬 第一个视频开始播放，隐藏圆环');
+                                firstCard.classList.remove('video-loading');
+                                firstCard.classList.add('in-viewport');
+                                loadingVideos.delete(firstVideo); // 移除加载标记
+                                
+                                // 第一个视频开始播放后，加载后续3张图片
+                                console.log('📸 开始后台加载后续图片');
+                                loadNextImages();
+                            };
+                            
+                            // 监听错误
+                            const onError = () => {
+                                console.log('❌ 第一个视频加载错误');
+                                firstCard.classList.remove('video-loading');
+                                loadingVideos.delete(firstVideo); // 移除加载标记
+                                if (currentPlayingVideo === firstVideo) {
+                                    currentPlayingVideo = null;
+                                }
+                            };
+                            
+                            firstVideo.addEventListener('progress', onProgress);
+                            firstVideo.addEventListener('canplay', onCanPlay, { once: true });
+                            firstVideo.addEventListener('playing', onPlaying, { once: true });
+                            firstVideo.addEventListener('error', onError, { once: true });
+                            
+                            // 超时保护：15秒后如果还没播放，强制隐藏圆环
+                            setTimeout(() => {
+                                if (firstCard.classList.contains('video-loading')) {
+                                    console.log('⏱️ 第一个视频加载超时，隐藏圆环');
+                                    firstCard.classList.remove('video-loading');
+                                    loadingVideos.delete(firstVideo); // 移除加载标记
+                                    if (currentPlayingVideo === firstVideo) {
+                                        currentPlayingVideo = null;
+                                    }
+                                }
+                            }, 15000);
+                            
+                            // 先加载视频（如果preload="none"的话）
+                            firstVideo.load();
+                            firstVideo.play().catch(err => {
+                                console.log('第一个视频播放失败:', err);
+                                firstCard.classList.remove('video-loading');
+                                loadingVideos.delete(firstVideo);
+                                if (currentPlayingVideo === firstVideo) {
+                                    currentPlayingVideo = null;
+                                }
+                            });
                             
                             // 标记第一个视频已开始加载，防止 setupMobileVideoPlayback 干扰
                             firstCard.setAttribute('data-first-video-loading', 'true');
