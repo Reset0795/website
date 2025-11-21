@@ -1950,6 +1950,67 @@
             
             // 确保布局执行
             setTimeout(() => layoutMasonry(), 100);
+            
+            // 移动端：立即开始加载第一个视频（不等待setupMobileVideoPlayback）
+            if (window.innerWidth < 768) {
+                setTimeout(() => {
+                    const cardsWithVideo = grid.querySelectorAll('.project-card.has-video');
+                    if (cardsWithVideo.length > 0) {
+                        const firstCard = cardsWithVideo[0];
+                        const firstVideo = firstCard.querySelector('.preview-video');
+                        if (firstVideo && firstVideo.preload === 'auto') {
+                            // 第一个视频已经设置了preload="auto"，确保它立即开始加载和播放
+                            console.log('🚀 立即开始加载第一个视频');
+                            
+                            // 显示加载圆环
+                            firstCard.classList.add('video-loading');
+                            
+                            // 监听加载进度
+                            const onProgress = () => {
+                                if (firstVideo.buffered.length > 0) {
+                                    const buffered = firstVideo.buffered.end(0);
+                                    const duration = firstVideo.duration;
+                                    if (duration > 0) {
+                                        const progress = (buffered / duration) * 100;
+                                        const progressBar = firstCard.querySelector('.progress-bar');
+                                        if (progressBar) {
+                                            const circumference = 2 * Math.PI * 15.5;
+                                            const offset = circumference - (progress / 100) * circumference;
+                                            progressBar.style.strokeDashoffset = offset;
+                                        }
+                                    }
+                                }
+                            };
+                            
+                            // 监听视频可以播放
+                            const onCanPlay = () => {
+                                console.log('✅ 第一个视频可以播放了');
+                                firstVideo.play().catch(err => {
+                                    console.log('第一个视频播放失败:', err);
+                                });
+                            };
+                            
+                            // 监听视频开始播放
+                            const onPlaying = () => {
+                                console.log('🎬 第一个视频开始播放');
+                                firstCard.classList.remove('video-loading');
+                                firstCard.classList.add('in-viewport');
+                            };
+                            
+                            firstVideo.addEventListener('progress', onProgress);
+                            firstVideo.addEventListener('canplay', onCanPlay, { once: true });
+                            firstVideo.addEventListener('playing', onPlaying, { once: true });
+                            
+                            // 如果视频已经有足够数据，立即尝试播放
+                            if (firstVideo.readyState >= 3) {
+                                firstVideo.play().catch(err => {
+                                    console.log('第一个视频立即播放失败:', err);
+                                });
+                            }
+                        }
+                    }
+                }, 50); // 很短的延迟，确保DOM已插入
+            }
         }
 
         // 播放预览视频
@@ -2500,14 +2561,6 @@
                 videoObserver = null;
             }
             
-            // 暂停所有视频
-            const allVideos = document.querySelectorAll('.preview-video');
-            allVideos.forEach(video => {
-                video.pause();
-                video.currentTime = 0;
-            });
-            currentPlayingVideo = null;
-            
             // 初始化所有项目卡片和加载索引
             allProjectCards = Array.from(document.querySelectorAll('.project-card'));
             nextImageIndexToLoad = 1; // 第一张图片已经自动加载了
@@ -2517,16 +2570,34 @@
             const cardsWithVideo = document.querySelectorAll('.project-card.has-video');
             if (cardsWithVideo.length === 0) return;
             
-            // 立即加载并播放第一个视频
+            // 检查第一个视频是否已经在加载或播放
             const firstCard = cardsWithVideo[0];
             const firstVideo = firstCard.querySelector('.preview-video');
-            if (firstVideo) {
+            
+            // 如果第一个视频已经在播放，不需要重新初始化
+            if (firstVideo && !firstVideo.paused && firstCard.classList.contains('in-viewport')) {
+                console.log('✅ 第一个视频已经在播放，跳过初始化');
                 currentPlayingVideo = firstVideo;
-                loadingVideos.add(firstVideo); // 标记为正在加载
+                // 只设置滚动监听，不重新加载视频
+            } else if (firstVideo) {
+                // 暂停所有其他视频（除了第一个）
+                const allVideos = document.querySelectorAll('.preview-video');
+                allVideos.forEach(video => {
+                    if (video !== firstVideo) {
+                        video.pause();
+                        video.currentTime = 0;
+                    }
+                });
                 
-                // 显示加载圆环（初始进度0%）
-                firstCard.classList.add('video-loading');
-                updateProgressRing(firstCard, 0);
+                // 如果第一个视频还没有开始加载，现在开始加载
+                if (!firstCard.classList.contains('video-loading') && !firstCard.classList.contains('in-viewport')) {
+                    console.log('🚀 setupMobileVideoPlayback: 开始加载第一个视频');
+                    currentPlayingVideo = firstVideo;
+                    loadingVideos.add(firstVideo); // 标记为正在加载
+                    
+                    // 显示加载圆环（初始进度0%）
+                    firstCard.classList.add('video-loading');
+                    updateProgressRing(firstCard, 0);
                 
                 // 监听加载进度
                 const onProgress = () => {
@@ -2611,7 +2682,8 @@
                     // 等待loadedmetadata事件，然后尝试播放
                     firstVideo.addEventListener('loadedmetadata', tryPlay, { once: true });
                 }
-            }
+                } // 结束 if (!firstCard.classList.contains('video-loading') && !firstCard.classList.contains('in-viewport'))
+            } // 结束 else if (firstVideo)
             
             // 检测视频是否大部分可见（70%以上）
             function isMostlyVisible(card) {
