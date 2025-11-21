@@ -143,6 +143,11 @@
         .page-title {
             display: none;
         }
+        
+        /* 移动端提示文字 - 桌面端默认隐藏 */
+        .mobile-tip {
+            display: none;
+        }
 
         /* 项目网格 - 瀑布流布局 */
         .projects-grid {
@@ -577,6 +582,17 @@
                 font-size: 18px; /* 目录字体大小 */
                 padding: 4px 0;
             }
+            
+            /* 移动端提示文字 */
+            .mobile-tip {
+                display: block;
+                text-align: center;
+                font-size: 13px;
+                color: #666666;
+                margin-top: 10px;
+                padding: 0 15px;
+                line-height: 1.5;
+            }
 
             /* 主要内容区域 - 从目录下方开始，取消左右padding让项目占满屏幕 */
             .main-content {
@@ -703,6 +719,7 @@
                     </li>
                 </ul>
             </nav>
+            <div class="mobile-tip">* 视频内容较多，推荐电脑端浏览以获得更佳体验 *</div>
         </aside>
 
         <!-- 主要内容区域 -->
