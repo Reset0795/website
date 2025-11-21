@@ -1580,6 +1580,9 @@
                 : projects.filter(p => p.category === category);
             
             grid.innerHTML = filteredProjects.map(project => {
+                // 检测是否移动端
+                const isMobile = window.innerWidth < 768;
+                
                 // 封面图
                 let coverHTML = project.cover 
                     ? `<img src="${project.cover}" alt="${project.title}" class="cover-image">` 
@@ -1589,8 +1592,10 @@
                 let previewVideoHTML = '';
                 if (project.video && project.video.src) {
                     if (project.video.type === 'video') {
-                        // 本地视频
-                        previewVideoHTML = `<video src="${project.video.src}" class="preview-video" loop muted playsinline></video>`;
+                        // 移动端：preload="none" 不预加载，避免卡顿
+                        // 桌面端：preload="metadata" 预加载元数据，支持hover播放
+                        const preloadMode = isMobile ? 'none' : 'metadata';
+                        previewVideoHTML = `<video src="${project.video.src}" class="preview-video" loop muted playsinline preload="${preloadMode}"></video>`;
                     } else if (project.video.type === 'youtube') {
                         // YouTube 不支持悬停预览，使用封面
                         previewVideoHTML = '';
@@ -2144,62 +2149,120 @@
             }
         });
 
-        // 移动端滚动监听：当项目进入视口时自动播放视频
-        function setupScrollVideoPlayback() {
+        // 移动端视频播放控制
+        let currentPlayingVideo = null;
+        let videoObserver = null;
+        
+        function setupMobileVideoPlayback() {
             // 只在移动端启用
             if (window.innerWidth >= 768) return;
             
-            const observerOptions = {
-                root: null,
-                rootMargin: '0px',
-                threshold: 0.5 // 当项目50%进入视口时触发
-            };
+            // 清理之前的观察器
+            if (videoObserver) {
+                videoObserver.disconnect();
+                videoObserver = null;
+            }
             
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    const card = entry.target;
-                    const video = card.querySelector('.preview-video');
-                    
-                    if (entry.isIntersecting) {
-                        // 项目进入视口，添加in-viewport类并播放视频
-                        card.classList.add('in-viewport');
-                        if (video) {
+            // 暂停所有视频
+            const allVideos = document.querySelectorAll('.preview-video');
+            allVideos.forEach(video => {
+                video.pause();
+                video.currentTime = 0;
+            });
+            currentPlayingVideo = null;
+            
+            const cardsWithVideo = document.querySelectorAll('.project-card.has-video');
+            if (cardsWithVideo.length === 0) return;
+            
+            // 立即加载并播放第一个视频
+            const firstCard = cardsWithVideo[0];
+            const firstVideo = firstCard.querySelector('.preview-video');
+            if (firstVideo) {
+                firstCard.classList.add('in-viewport');
+                currentPlayingVideo = firstVideo;
+                // 先加载视频（如果preload="none"的话）
+                firstVideo.load();
+                firstVideo.play().catch(err => {
+                    console.log('第一个视频播放失败:', err);
+                });
+            }
+            
+            // 检测视频是否在画面中央
+            function isInCenter(card) {
+                const rect = card.getBoundingClientRect();
+                const viewportHeight = window.innerHeight;
+                const cardCenter = rect.top + rect.height / 2;
+                const viewportCenter = viewportHeight / 2;
+                
+                // 视频中心点在视口中央的30%范围内
+                const centerThreshold = viewportHeight * 0.3;
+                return Math.abs(cardCenter - viewportCenter) < centerThreshold;
+            }
+            
+            // 查找并播放中央的视频
+            function playVideoInCenter() {
+                for (let card of cardsWithVideo) {
+                    if (isInCenter(card)) {
+                        const video = card.querySelector('.preview-video');
+                        
+                        // 如果当前视频不是正在播放的视频
+                        if (video && video !== currentPlayingVideo) {
+                            // 暂停之前的视频
+                            if (currentPlayingVideo) {
+                                currentPlayingVideo.pause();
+                                currentPlayingVideo.currentTime = 0;
+                                const prevCard = currentPlayingVideo.closest('.project-card');
+                                if (prevCard) {
+                                    prevCard.classList.remove('in-viewport');
+                                }
+                            }
+                            
+                            // 加载并播放新视频
+                            card.classList.add('in-viewport');
+                            currentPlayingVideo = video;
+                            // 先加载视频（如果preload="none"的话）
+                            video.load();
                             video.play().catch(err => {
-                                console.log('Video play failed:', err);
+                                console.log('视频播放失败:', err);
                             });
                         }
-                    } else {
-                        // 项目离开视口，移除in-viewport类并暂停视频
-                        card.classList.remove('in-viewport');
-                        if (video) {
-                            video.pause();
-                            video.currentTime = 0;
-                        }
+                        
+                        break; // 只播放一个视频
                     }
-                });
-            }, observerOptions);
+                }
+            }
             
-            // 观察所有有视频的项目卡片
-            const cardsWithVideo = document.querySelectorAll('.project-card.has-video');
-            cardsWithVideo.forEach(card => {
-                observer.observe(card);
-            });
+            // 监听滚动事件
+            let scrollTimeout;
+            const handleScroll = () => {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    playVideoInCenter();
+                }, 150); // 滚动停止150ms后检查
+            };
+            
+            window.addEventListener('scroll', handleScroll, { passive: true });
+            
+            // 也监听scrollend事件（如果支持）
+            if ('onscrollend' in window) {
+                window.addEventListener('scrollend', playVideoInCenter, { passive: true });
+            }
         }
         
-        // 在项目渲染后设置滚动监听
+        // 在项目渲染后设置视频播放控制
         const originalRenderProjects = renderProjects;
         renderProjects = function(category) {
             originalRenderProjects(category);
             // 延迟一下，确保DOM已更新
             setTimeout(() => {
-                setupScrollVideoPlayback();
+                setupMobileVideoPlayback();
             }, 100);
         };
         
         // 窗口大小改变时重新设置
         window.addEventListener('resize', () => {
             setTimeout(() => {
-                setupScrollVideoPlayback();
+                setupMobileVideoPlayback();
             }, 100);
         });
 
