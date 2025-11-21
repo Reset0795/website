@@ -261,6 +261,34 @@
             object-fit: cover;
             z-index: 1;
         }
+        
+        /* 视频加载圆环（默认隐藏） */
+        .video-loading-spinner {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            z-index: 3;
+        }
+        
+        .video-loading-spinner::after {
+            content: '';
+            display: block;
+            width: 30px;
+            height: 30px;
+            border: 5px solid #333;
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spinner-rotate 0.8s linear infinite;
+        }
+        
+        @keyframes spinner-rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
 
         .project-card.has-video:hover .cover-image {
             opacity: 0; /* 只有在有预览视频时才隐藏封面图 */
@@ -671,6 +699,11 @@
             /* 移动端：当项目进入视口时，隐藏封面图显示视频 */
             .project-card.has-video.in-viewport .cover-image {
                 opacity: 0;
+            }
+            
+            /* 移动端：视频加载时显示圆环 */
+            .project-card.video-loading .video-loading-spinner {
+                display: block;
             }
 
             .modal-content {
@@ -1638,6 +1671,7 @@
                         <div class="project-image">
                             ${coverHTML}
                             ${previewVideoHTML}
+                            <div class="video-loading-spinner"></div>
                         </div>
                         <div class="project-info">
                             <h3 class="project-title">${project.title}</h3>
@@ -2195,12 +2229,24 @@
             const firstCard = cardsWithVideo[0];
             const firstVideo = firstCard.querySelector('.preview-video');
             if (firstVideo) {
-                firstCard.classList.add('in-viewport');
                 currentPlayingVideo = firstVideo;
+                
+                // 显示加载圆环
+                firstCard.classList.add('video-loading');
+                
+                // 监听视频加载完成
+                const onCanPlay = () => {
+                    firstCard.classList.remove('video-loading');
+                    firstCard.classList.add('in-viewport');
+                };
+                
+                firstVideo.addEventListener('canplay', onCanPlay, { once: true });
+                
                 // 先加载视频（如果preload="none"的话）
                 firstVideo.load();
                 firstVideo.play().catch(err => {
                     console.log('第一个视频播放失败:', err);
+                    firstCard.classList.remove('video-loading');
                 });
             }
             
@@ -2231,16 +2277,27 @@
                                 const prevCard = currentPlayingVideo.closest('.project-card');
                                 if (prevCard) {
                                     prevCard.classList.remove('in-viewport');
+                                    prevCard.classList.remove('video-loading');
                                 }
                             }
                             
-                            // 加载并播放新视频
-                            card.classList.add('in-viewport');
+                            // 显示加载圆环
+                            card.classList.add('video-loading');
                             currentPlayingVideo = video;
+                            
+                            // 监听视频加载完成
+                            const onCanPlay = () => {
+                                card.classList.remove('video-loading');
+                                card.classList.add('in-viewport');
+                            };
+                            
+                            video.addEventListener('canplay', onCanPlay, { once: true });
+                            
                             // 先加载视频（如果preload="none"的话）
                             video.load();
                             video.play().catch(err => {
                                 console.log('视频播放失败:', err);
+                                card.classList.remove('video-loading');
                             });
                         }
                         
