@@ -819,20 +819,26 @@
     </div>
 
     <script>
-        // 阿里云OSS传输加速域名（配置CORS后解决 Chrome PNA 问题）
-        const OSS_BASE_URL = 'https://portfolio-fuwei.oss-accelerate.aliyuncs.com/';
+        // 阿里云OSS基础URL配置（仅移动端使用）
+        const OSS_BASE_URL = 'https://portfolio-fuwei.oss-cn-shanghai.aliyuncs.com/';
         
-        // 备注：需在 OSS 控制台配置 CORS，添加以下暴露 Headers：
-        // Access-Control-Allow-Private-Network
-        
-        // 资源路径处理函数：自动拼接OSS域名
+        // 资源路径处理函数：移动端使用OSS，桌面端使用本地文件
         function getResourceUrl(path) {
             // 如果路径已经是完整URL（以http开头），直接返回
             if (path && path.startsWith('http')) {
                 return path;
             }
-            // 否则拼接OSS基础URL
-            return OSS_BASE_URL + path;
+            
+            // 检测是否为移动端（宽度 < 768px）
+            const isMobile = window.innerWidth < 768;
+            
+            if (isMobile) {
+                // 移动端：使用阿里云OSS加速加载
+                return OSS_BASE_URL + path;
+            } else {
+                // 桌面端：使用本地文件，避免Chrome PNA安全策略限制
+                return path;
+            }
         }
         
         // 示例项目数据
