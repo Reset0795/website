@@ -2366,19 +2366,16 @@
                 });
             }
             
-            // 检测视频是否在画面中央
-            function isInCenter(card) {
+            // 检测视频是否完全在屏幕中
+            function isFullyVisible(card) {
                 const rect = card.getBoundingClientRect();
                 const viewportHeight = window.innerHeight;
-                const cardCenter = rect.top + rect.height / 2;
-                const viewportCenter = viewportHeight / 2;
                 
-                // 视频中心点在视口中央的30%范围内
-                const centerThreshold = viewportHeight * 0.3;
-                return Math.abs(cardCenter - viewportCenter) < centerThreshold;
+                // 视频的顶部和底部都在视口内，说明完全可见
+                return rect.top >= 0 && rect.bottom <= viewportHeight;
             }
             
-            // 检测视频是否大部分已经离开屏幕（超过一半不在视口中）
+            // 检测视频是否有一半离开屏幕
             function isHalfOutOfView(card) {
                 const rect = card.getBoundingClientRect();
                 const viewportHeight = window.innerHeight;
@@ -2392,13 +2389,13 @@
                 return visibleHeight < rect.height / 2;
             }
             
-            // 查找并播放中央的视频
+            // 查找并播放完全可见的视频
             function playVideoInCenter() {
-                // 先检查当前播放的视频是否已经大部分离开屏幕
+                // 先检查当前播放的视频是否已经有一半离开屏幕
                 if (currentPlayingVideo) {
                     const currentCard = currentPlayingVideo.closest('.project-card');
                     if (currentCard && isHalfOutOfView(currentCard)) {
-                        // 当前视频超过一半已经不在屏幕中，暂停它
+                        // 当前视频有一半已经不在屏幕中，暂停它
                         currentPlayingVideo.pause();
                         currentPlayingVideo.currentTime = 0;
                         currentCard.classList.remove('in-viewport');
@@ -2407,9 +2404,9 @@
                     }
                 }
                 
-                // 查找中央的视频并播放
+                // 查找完全在屏幕中的视频并播放
                 for (let card of cardsWithVideo) {
-                    if (isInCenter(card)) {
+                    if (isFullyVisible(card)) {
                         const video = card.querySelector('.preview-video');
                         
                         // 如果当前视频不是正在播放的视频
@@ -2474,10 +2471,11 @@
             // 监听滚动事件
             let scrollTimeout;
             const handleScroll = () => {
-                // 滚动时立即检查当前视频是否已离开屏幕
+                // 滚动时立即检查当前视频是否有一半离开屏幕
                 if (currentPlayingVideo) {
                     const currentCard = currentPlayingVideo.closest('.project-card');
                     if (currentCard && isHalfOutOfView(currentCard)) {
+                        // 有一半离开屏幕，立即暂停
                         currentPlayingVideo.pause();
                         currentPlayingVideo.currentTime = 0;
                         currentCard.classList.remove('in-viewport');
@@ -2486,7 +2484,7 @@
                     }
                 }
                 
-                // 滚动停止后检查并播放中央的视频
+                // 滚动停止后检查并播放完全可见的视频
                 clearTimeout(scrollTimeout);
                 scrollTimeout = setTimeout(() => {
                     playVideoInCenter();
