@@ -1700,6 +1700,10 @@
         function renderProjects(category = 'all') {
             const grid = document.getElementById('projectsGrid');
             
+            // 保存当前滚动位置（移动端特别重要）
+            const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+            const isMobile = window.innerWidth < 768;
+            
             // 切换目录时先隐藏网格，避免布局跳动
             grid.classList.remove('loaded');
             
@@ -2171,9 +2175,14 @@
         });
 
         // 分类切换
+        let isCategorySwitching = false; // 标记是否正在切换分类
         document.querySelectorAll('.category-link').forEach(link => {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
+                e.stopPropagation(); // 阻止事件冒泡
+                
+                // 标记正在切换分类
+                isCategorySwitching = true;
                 
                 // 更新活动状态
                 document.querySelectorAll('.category-link').forEach(l => l.classList.remove('active'));
@@ -2181,7 +2190,34 @@
                 
                 // 渲染对应分类的项目
                 const category = this.getAttribute('data-category');
+                
+                // 移动端：立即停止当前滚动，然后平滑滚动到顶部
+                const isMobile = window.innerWidth < 768;
+                if (isMobile) {
+                    // 先立即停止滚动
+                    window.scrollTo({
+                        top: window.pageYOffset,
+                        behavior: 'auto'
+                    });
+                }
+                
                 renderProjects(category);
+                
+                // 移动端：切换分类后平滑滚动到顶部
+                if (isMobile) {
+                    setTimeout(() => {
+                        window.scrollTo({
+                            top: 0,
+                            behavior: 'smooth'
+                        });
+                        // 重置标记
+                        setTimeout(() => {
+                            isCategorySwitching = false;
+                        }, 500);
+                    }, 150);
+                } else {
+                    isCategorySwitching = false;
+                }
             });
         });
 
@@ -2231,18 +2267,41 @@
         let lastWindowWidth = window.innerWidth;
         let lastWindowHeight = window.innerHeight;
         let wasFullscreen = isFullscreen();
+        
+        // 检测是否为移动端
+        function isMobileDevice() {
+            return window.innerWidth < 768 || /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(navigator.userAgent);
+        }
 
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
                 const currentFullscreen = isFullscreen();
                 const widthChanged = Math.abs(window.innerWidth - lastWindowWidth) > 50;
-                const heightChanged = Math.abs(window.innerHeight - lastWindowHeight) > 50;
+                // 移动端：忽略高度变化（地址栏显示/隐藏会导致高度变化，但不应该刷新）
+                // 桌面端：高度变化超过50px才刷新
+                const heightChanged = isMobileDevice() 
+                    ? false  // 移动端忽略高度变化
+                    : Math.abs(window.innerHeight - lastWindowHeight) > 50;
                 
-                // 如果全屏状态改变或窗口大小显著改变，刷新页面
-                if (wasFullscreen !== currentFullscreen || widthChanged || heightChanged) {
-                    window.location.reload();
-                    return;
+                const isMobile = isMobileDevice();
+                const fullscreenChanged = wasFullscreen !== currentFullscreen;
+                
+                // 判断是否需要刷新页面
+                // 移动端：只在全屏状态改变或宽度显著改变时刷新（忽略高度变化）
+                // 桌面端：全屏状态改变、宽度或高度显著改变时刷新
+                const shouldReload = fullscreenChanged || widthChanged || heightChanged;
+                
+                if (shouldReload) {
+                    // 移动端：如果只是高度变化（地址栏显示/隐藏），不刷新，只重新布局
+                    if (isMobile && !fullscreenChanged && !widthChanged) {
+                        // 移动端高度变化，只重新布局，不刷新
+                        // 继续执行下面的布局代码
+                    } else {
+                        // 其他情况：刷新页面
+                        window.location.reload();
+                        return;
+                    }
                 }
                 
                 // 否则重新计算布局
