@@ -755,9 +755,33 @@
                 display: block;
             }
 
+            .modal-overlay.active {
+                padding: 10px; /* 移动端减少 padding */
+                align-items: flex-start; /* 移动端从顶部对齐 */
+                padding-top: 50px; /* 为关闭按钮留出空间 */
+            }
+
             .modal-content {
-                margin: 20px;
-                max-width: calc(100vw - 40px);
+                margin: 0;
+                max-width: calc(100vw - 20px);
+                max-height: 90vh;
+                width: 100%;
+            }
+
+            .modal-media-container {
+                max-height: 50vh; /* 移动端限制媒体容器高度为视口高度的50% */
+            }
+
+            .modal-image,
+            .modal-video {
+                height: auto !important;
+                max-height: 50vh; /* 移动端限制图片/视频高度为视口高度的50% */
+                object-fit: contain;
+            }
+
+            .media-placeholder {
+                height: auto !important;
+                max-height: 50vh; /* 移动端限制占位符高度 */
             }
 
             .modal-body {
@@ -2017,6 +2041,12 @@
                     if (isMobile && previewVideo.preload === 'none' && previewVideo.readyState === 0) {
                         // 主动加载视频元数据（不加载完整视频，只加载元数据）
                         previewVideo.load();
+                        // 再次调用 load() 确保加载开始
+                        setTimeout(() => {
+                            if (previewVideo.readyState === 0) {
+                                previewVideo.load();
+                            }
+                        }, 0);
                     }
                     
                     if (previewVideo.readyState >= 2 && previewVideo.videoWidth && previewVideo.videoHeight) {
@@ -2973,8 +3003,29 @@
                     }
                 };
                 
+                // 监听 loadedmetadata 事件（比 canplay 更早）
+                const onLoadedMetadata = () => {
+                    console.log('视频元数据已加载，尝试播放');
+                    topVideo.video.play().catch(err => {
+                        console.log('视频播放失败（loadedmetadata）:', err);
+                    });
+                };
+                
                 topVideo.video.addEventListener('progress', onProgress);
+                topVideo.video.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
+                topVideo.video.addEventListener('loadeddata', () => {
+                    console.log('视频已加载数据，尝试播放');
+                    topVideo.video.play().catch(err => {
+                        console.log('视频播放失败（loadeddata）:', err);
+                    });
+                }, { once: true });
                 topVideo.video.addEventListener('canplay', onCanPlay, { once: true });
+                topVideo.video.addEventListener('canplaythrough', () => {
+                    console.log('视频可以流畅播放，尝试播放');
+                    topVideo.video.play().catch(err => {
+                        console.log('视频播放失败（canplaythrough）:', err);
+                    });
+                }, { once: true });
                 topVideo.video.addEventListener('playing', onPlaying, { once: true });
                 topVideo.video.addEventListener('error', onError, { once: true });
                 
@@ -2991,15 +3042,64 @@
                 }, 15000);
                 
                 // 先加载视频（如果preload="none"的话）
-                topVideo.video.load();
-                topVideo.video.play().catch(err => {
-                    console.log('视频播放失败:', err);
-                    topVideo.card.classList.remove('video-loading');
-                    loadingVideos.delete(topVideo.video);
-                    if (currentPlayingVideo === topVideo.video) {
-                        currentPlayingVideo = null;
-                    }
-                });
+                // 对于 preload="none" 的视频，需要主动加载
+                if (topVideo.video.preload === 'none' || topVideo.video.readyState === 0) {
+                    topVideo.video.load();
+                    // 再次调用 load() 确保加载开始
+                    setTimeout(() => {
+                        if (topVideo.video.readyState === 0) {
+                            topVideo.video.load();
+                            console.log('视频 readyState === 0，再次调用 load()');
+                        }
+                    }, 0);
+                }
+                
+                // 尝试播放视频
+                const tryPlayVideo = () => {
+                    topVideo.video.play().catch(err => {
+                        console.log('视频播放失败:', err);
+                        // 如果播放失败，至少确保视频已加载
+                        if (topVideo.video.readyState >= 2) {
+                            // 视频有元数据，等待 canplay 事件
+                            topVideo.video.addEventListener('canplay', () => {
+                                topVideo.video.play().catch(err => {
+                                    console.log('视频 canplay 后播放失败:', err);
+                                    topVideo.card.classList.remove('video-loading');
+                                    loadingVideos.delete(topVideo.video);
+                                    if (currentPlayingVideo === topVideo.video) {
+                                        currentPlayingVideo = null;
+                                    }
+                                });
+                            }, { once: true });
+                        } else {
+                            // 视频还没有元数据，等待 loadedmetadata 事件
+                            topVideo.video.addEventListener('loadedmetadata', () => {
+                                topVideo.video.play().catch(err => {
+                                    console.log('视频 loadedmetadata 后播放失败:', err);
+                                    topVideo.card.classList.remove('video-loading');
+                                    loadingVideos.delete(topVideo.video);
+                                    if (currentPlayingVideo === topVideo.video) {
+                                        currentPlayingVideo = null;
+                                    }
+                                });
+                            }, { once: true });
+                        }
+                    });
+                };
+                
+                // 如果视频已经有足够数据，立即尝试播放
+                if (topVideo.video.readyState >= 3) {
+                    console.log('视频已有足够数据（readyState >= 3），立即播放');
+                    tryPlayVideo();
+                } else if (topVideo.video.readyState >= 2) {
+                    // 如果有元数据，也尝试播放
+                    console.log('视频有元数据（readyState >= 2），尝试播放');
+                    tryPlayVideo();
+                } else {
+                    // 即使 readyState === 0，也尝试播放（浏览器会自动等待加载）
+                    console.log('视频 readyState === 0，尝试播放（浏览器会自动等待）');
+                    tryPlayVideo();
+                }
             }
             
             // 监听滚动事件（优化：减少频繁触发）
