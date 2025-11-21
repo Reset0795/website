@@ -153,6 +153,14 @@
         .projects-grid {
             position: relative;
             margin-bottom: 80px;
+            visibility: hidden;
+            opacity: 0;
+        }
+        
+        .projects-grid.loaded {
+            visibility: visible;
+            opacity: 1;
+            transition: opacity 0.3s ease;
         }
 
         .project-card {
@@ -262,32 +270,36 @@
             z-index: 1;
         }
         
-        /* 视频加载圆环（默认隐藏） */
+        /* 视频加载进度圆环（默认隐藏） */
         .video-loading-spinner {
             display: none;
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 30px;
-            height: 30px;
+            width: 36px;
+            height: 36px;
             z-index: 3;
         }
         
-        .video-loading-spinner::after {
-            content: '';
-            display: block;
-            width: 30px;
-            height: 30px;
-            border: 5px solid #333;
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spinner-rotate 0.8s linear infinite;
+        .video-loading-spinner svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg); /* 从顶部开始 */
         }
         
-        @keyframes spinner-rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .video-loading-spinner .progress-bg {
+            fill: none;
+            stroke: #333;
+            stroke-width: 5;
+        }
+        
+        .video-loading-spinner .progress-bar {
+            fill: none;
+            stroke: #fff;
+            stroke-width: 5;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.1s ease;
         }
 
         .project-card.has-video:hover .cover-image {
@@ -1618,6 +1630,9 @@
             });
             grid.style.height = maxHeight + 'px';
             
+            // 布局完成后显示网格
+            grid.classList.add('loaded');
+            
             isLayouting = false;
         }
 
@@ -1625,18 +1640,34 @@
         function renderProjects(category = 'all') {
             const grid = document.getElementById('projectsGrid');
             
+            // 切换目录时先隐藏网格，避免布局跳动
+            grid.classList.remove('loaded');
+            
+            // 强制触发重排，确保隐藏立即生效
+            void grid.offsetHeight;
+            
             const filteredProjects = category === 'all' 
                 ? projects 
                 : projects.filter(p => p.category === category);
             
-            grid.innerHTML = filteredProjects.map(project => {
+            grid.innerHTML = filteredProjects.map((project, index) => {
                 // 检测是否移动端
                 const isMobile = window.innerWidth < 768;
                 
                 // 封面图
-                let coverHTML = project.cover 
-                    ? `<img src="${project.cover}" alt="${project.title}" class="cover-image">` 
-                    : '<div class="cover-image" style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>';
+                let coverHTML;
+                if (project.cover) {
+                    if (isMobile) {
+                        // 移动端：第一张图片eager加载，其他lazy加载
+                        const loadingMode = index === 0 ? 'eager' : 'lazy';
+                        coverHTML = `<img src="${project.cover}" alt="${project.title}" class="cover-image" loading="${loadingMode}">`;
+                    } else {
+                        // 桌面端：保持原有逻辑
+                        coverHTML = `<img src="${project.cover}" alt="${project.title}" class="cover-image">`;
+                    }
+                } else {
+                    coverHTML = '<div class="cover-image" style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>';
+                }
                 
                 // 预览视频
                 let previewVideoHTML = '';
@@ -1671,7 +1702,14 @@
                         <div class="project-image">
                             ${coverHTML}
                             ${previewVideoHTML}
-                            <div class="video-loading-spinner"></div>
+                            <div class="video-loading-spinner">
+                                <svg viewBox="0 0 36 36">
+                                    <circle class="progress-bg" cx="18" cy="18" r="15.5"></circle>
+                                    <circle class="progress-bar" cx="18" cy="18" r="15.5" 
+                                            stroke-dasharray="97.4" 
+                                            stroke-dashoffset="97.4"></circle>
+                                </svg>
+                            </div>
                         </div>
                         <div class="project-info">
                             <h3 class="project-title">${project.title}</h3>
@@ -2203,6 +2241,67 @@
         // 移动端视频播放控制
         let currentPlayingVideo = null;
         let videoObserver = null;
+        let nextImageIndexToLoad = 1; // 下一个要加载的图片索引（第一个已经自动加载了）
+        let allProjectCards = []; // 所有项目卡片
+        
+        // 更新进度圆环
+        function updateProgressRing(card, progress) {
+            const progressBar = card.querySelector('.progress-bar');
+            if (!progressBar) return;
+            
+            // 圆的周长 = 2 * PI * r，这里 r = 15.5
+            const circumference = 2 * Math.PI * 15.5; // 约 97.4
+            const offset = circumference - (progress / 100) * circumference;
+            progressBar.style.strokeDashoffset = offset;
+        }
+        
+        // 后台加载接下来的3张图片
+        function loadNextImages() {
+            // 只在移动端执行
+            if (window.innerWidth >= 768) return;
+            
+            const imagesToLoad = 3;
+            let loadedCount = 0;
+            
+            console.log(`📸 开始加载后续${imagesToLoad}张图片，从索引${nextImageIndexToLoad}开始`);
+            
+            for (let i = 0; i < imagesToLoad; i++) {
+                const index = nextImageIndexToLoad + i;
+                
+                if (index >= allProjectCards.length) {
+                    console.log('✅ 所有图片已加载完成');
+                    break;
+                }
+                
+                const card = allProjectCards[index];
+                const img = card.querySelector('.cover-image');
+                
+                if (img && img.tagName === 'IMG' && !img.complete) {
+                    // 如果图片还未加载，强制加载
+                    img.loading = 'eager';
+                    
+                    // 如果src还未设置，设置它
+                    if (!img.src && img.getAttribute('data-src')) {
+                        img.src = img.getAttribute('data-src');
+                    }
+                    
+                    img.addEventListener('load', () => {
+                        loadedCount++;
+                        console.log(`✅ 图片 ${index + 1} 加载完成 (${loadedCount}/${imagesToLoad})`);
+                    }, { once: true });
+                    
+                    img.addEventListener('error', () => {
+                        loadedCount++;
+                        console.log(`❌ 图片 ${index + 1} 加载失败 (${loadedCount}/${imagesToLoad})`);
+                    }, { once: true });
+                } else {
+                    loadedCount++;
+                }
+            }
+            
+            // 更新下一个要加载的索引
+            nextImageIndexToLoad += imagesToLoad;
+        }
         
         function setupMobileVideoPlayback() {
             // 只在移动端启用
@@ -2222,6 +2321,12 @@
             });
             currentPlayingVideo = null;
             
+            // 初始化所有项目卡片和加载索引
+            allProjectCards = Array.from(document.querySelectorAll('.project-card'));
+            nextImageIndexToLoad = 1; // 第一张图片已经自动加载了
+            
+            console.log(`📱 初始化移动端加载策略，共${allProjectCards.length}个项目`);
+            
             const cardsWithVideo = document.querySelectorAll('.project-card.has-video');
             if (cardsWithVideo.length === 0) return;
             
@@ -2231,15 +2336,36 @@
             if (firstVideo) {
                 currentPlayingVideo = firstVideo;
                 
-                // 显示加载圆环
+                // 显示加载圆环（初始进度0%）
                 firstCard.classList.add('video-loading');
+                updateProgressRing(firstCard, 0);
+                
+                // 监听加载进度
+                const onProgress = () => {
+                    if (firstVideo.buffered.length > 0) {
+                        const buffered = firstVideo.buffered.end(0);
+                        const duration = firstVideo.duration;
+                        if (duration > 0) {
+                            const progress = (buffered / duration) * 100;
+                            updateProgressRing(firstCard, progress);
+                        }
+                    }
+                };
                 
                 // 监听视频加载完成
                 const onCanPlay = () => {
-                    firstCard.classList.remove('video-loading');
-                    firstCard.classList.add('in-viewport');
+                    updateProgressRing(firstCard, 100);
+                    setTimeout(() => {
+                        firstCard.classList.remove('video-loading');
+                        firstCard.classList.add('in-viewport');
+                        
+                        // 第一个视频加载完成后，开始加载后续3张图片
+                        console.log('🎬 第一个视频加载完成，开始后台加载后续图片');
+                        loadNextImages();
+                    }, 200); // 显示完整圆环200ms后再隐藏
                 };
                 
+                firstVideo.addEventListener('progress', onProgress);
                 firstVideo.addEventListener('canplay', onCanPlay, { once: true });
                 
                 // 先加载视频（如果preload="none"的话）
@@ -2262,8 +2388,36 @@
                 return Math.abs(cardCenter - viewportCenter) < centerThreshold;
             }
             
+            // 检测视频是否大部分已经离开屏幕（超过一半不在视口中）
+            function isHalfOutOfView(card) {
+                const rect = card.getBoundingClientRect();
+                const viewportHeight = window.innerHeight;
+                
+                // 计算卡片在视口中的可见高度
+                const visibleTop = Math.max(0, rect.top);
+                const visibleBottom = Math.min(viewportHeight, rect.bottom);
+                const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+                
+                // 如果可见高度小于卡片高度的一半，说明超过一半已经不在屏幕中
+                return visibleHeight < rect.height / 2;
+            }
+            
             // 查找并播放中央的视频
             function playVideoInCenter() {
+                // 先检查当前播放的视频是否已经大部分离开屏幕
+                if (currentPlayingVideo) {
+                    const currentCard = currentPlayingVideo.closest('.project-card');
+                    if (currentCard && isHalfOutOfView(currentCard)) {
+                        // 当前视频超过一半已经不在屏幕中，暂停它
+                        currentPlayingVideo.pause();
+                        currentPlayingVideo.currentTime = 0;
+                        currentCard.classList.remove('in-viewport');
+                        currentCard.classList.remove('video-loading');
+                        currentPlayingVideo = null;
+                    }
+                }
+                
+                // 查找中央的视频并播放
                 for (let card of cardsWithVideo) {
                     if (isInCenter(card)) {
                         const video = card.querySelector('.preview-video');
@@ -2281,16 +2435,37 @@
                                 }
                             }
                             
-                            // 显示加载圆环
+                            // 显示加载圆环（初始进度0%）
                             card.classList.add('video-loading');
+                            updateProgressRing(card, 0);
                             currentPlayingVideo = video;
+                            
+                            // 监听加载进度
+                            const onProgress = () => {
+                                if (video.buffered.length > 0) {
+                                    const buffered = video.buffered.end(0);
+                                    const duration = video.duration;
+                                    if (duration > 0) {
+                                        const progress = (buffered / duration) * 100;
+                                        updateProgressRing(card, progress);
+                                    }
+                                }
+                            };
                             
                             // 监听视频加载完成
                             const onCanPlay = () => {
-                                card.classList.remove('video-loading');
-                                card.classList.add('in-viewport');
+                                updateProgressRing(card, 100);
+                                setTimeout(() => {
+                                    card.classList.remove('video-loading');
+                                    card.classList.add('in-viewport');
+                                    
+                                    // 每次视频加载完成后，继续加载后续3张图片
+                                    console.log('🎬 视频加载完成，继续后台加载后续图片');
+                                    loadNextImages();
+                                }, 200); // 显示完整圆环200ms后再隐藏
                             };
                             
+                            video.addEventListener('progress', onProgress);
                             video.addEventListener('canplay', onCanPlay, { once: true });
                             
                             // 先加载视频（如果preload="none"的话）
@@ -2309,10 +2484,23 @@
             // 监听滚动事件
             let scrollTimeout;
             const handleScroll = () => {
+                // 滚动时立即检查当前视频是否已离开屏幕
+                if (currentPlayingVideo) {
+                    const currentCard = currentPlayingVideo.closest('.project-card');
+                    if (currentCard && isHalfOutOfView(currentCard)) {
+                        currentPlayingVideo.pause();
+                        currentPlayingVideo.currentTime = 0;
+                        currentCard.classList.remove('in-viewport');
+                        currentCard.classList.remove('video-loading');
+                        currentPlayingVideo = null;
+                    }
+                }
+                
+                // 滚动停止后检查并播放中央的视频
                 clearTimeout(scrollTimeout);
                 scrollTimeout = setTimeout(() => {
                     playVideoInCenter();
-                }, 150); // 滚动停止150ms后检查
+                }, 150);
             };
             
             window.addEventListener('scroll', handleScroll, { passive: true });
