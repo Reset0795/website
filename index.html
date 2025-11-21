@@ -2342,21 +2342,41 @@
                     }
                 };
                 
-                // 监听视频加载完成
+                // 监听视频加载进度到100%
                 const onCanPlay = () => {
                     updateProgressRing(firstCard, 100);
-                    setTimeout(() => {
-                        firstCard.classList.remove('video-loading');
-                        firstCard.classList.add('in-viewport');
-                        
-                        // 第一个视频加载完成后，开始加载后续3张图片
-                        console.log('🎬 第一个视频加载完成，开始后台加载后续图片');
-                        loadNextImages();
-                    }, 200); // 显示完整圆环200ms后再隐藏
+                    console.log('✅ 视频加载到100%，等待播放...');
+                };
+                
+                // 监听视频真正开始播放
+                const onPlaying = () => {
+                    console.log('🎬 视频开始播放，隐藏圆环');
+                    firstCard.classList.remove('video-loading');
+                    firstCard.classList.add('in-viewport');
+                    
+                    // 第一个视频开始播放后，加载后续3张图片
+                    console.log('📸 开始后台加载后续图片');
+                    loadNextImages();
+                };
+                
+                // 监听错误
+                const onError = () => {
+                    console.log('❌ 视频加载错误');
+                    firstCard.classList.remove('video-loading');
                 };
                 
                 firstVideo.addEventListener('progress', onProgress);
                 firstVideo.addEventListener('canplay', onCanPlay, { once: true });
+                firstVideo.addEventListener('playing', onPlaying, { once: true });
+                firstVideo.addEventListener('error', onError, { once: true });
+                
+                // 超时保护：15秒后如果还没播放，强制隐藏圆环
+                setTimeout(() => {
+                    if (firstCard.classList.contains('video-loading')) {
+                        console.log('⏱️ 视频加载超时，隐藏圆环');
+                        firstCard.classList.remove('video-loading');
+                    }
+                }, 15000);
                 
                 // 先加载视频（如果preload="none"的话）
                 firstVideo.load();
@@ -2449,22 +2469,41 @@
                                 }
                             };
                             
-                            // 监听视频加载完成
+                            // 监听视频加载进度到100%
                             const onCanPlay = () => {
-                                console.log('✅ 视频加载完成，准备播放');
+                                console.log('✅ 视频加载到100%，等待播放...');
                                 updateProgressRing(card, 100);
-                                setTimeout(() => {
-                                    card.classList.remove('video-loading');
-                                    card.classList.add('in-viewport');
-                                    
-                                    // 每次视频加载完成后，继续加载后续3张图片
-                                    console.log('📸 开始后台加载后续图片');
-                                    loadNextImages();
-                                }, 200); // 显示完整圆环200ms后再隐藏
+                            };
+                            
+                            // 监听视频真正开始播放
+                            const onPlaying = () => {
+                                console.log('🎬 视频开始播放，隐藏圆环');
+                                card.classList.remove('video-loading');
+                                card.classList.add('in-viewport');
+                                
+                                // 每次视频开始播放后，继续加载后续3张图片
+                                console.log('📸 开始后台加载后续图片');
+                                loadNextImages();
+                            };
+                            
+                            // 监听错误
+                            const onError = () => {
+                                console.log('❌ 视频加载错误');
+                                card.classList.remove('video-loading');
                             };
                             
                             video.addEventListener('progress', onProgress);
                             video.addEventListener('canplay', onCanPlay, { once: true });
+                            video.addEventListener('playing', onPlaying, { once: true });
+                            video.addEventListener('error', onError, { once: true });
+                            
+                            // 超时保护：15秒后如果还没播放，强制隐藏圆环
+                            setTimeout(() => {
+                                if (card.classList.contains('video-loading')) {
+                                    console.log('⏱️ 视频加载超时，隐藏圆环');
+                                    card.classList.remove('video-loading');
+                                }
+                            }, 15000);
                             
                             // 先加载视频（如果preload="none"的话）
                             video.load();
