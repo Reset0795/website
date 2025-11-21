@@ -2145,14 +2145,48 @@
         });
 
         // 移动端滚动监听：当项目进入视口时自动播放视频
+        // 移动端视频播放控制
+        let currentPlayingVideo = null;
+        let playTimeout = null;
+        let videoObservers = new Map(); // 存储每个视频的定时器
+        let currentVideoObserver = null; // 当前的 IntersectionObserver
+        
+        function pauseAllVideos() {
+            // 暂停所有正在播放的视频
+            const allVideos = document.querySelectorAll('.preview-video');
+            allVideos.forEach(video => {
+                if (!video.paused) {
+                    video.pause();
+                    video.currentTime = 0;
+                }
+            });
+            currentPlayingVideo = null;
+        }
+        
         function setupScrollVideoPlayback() {
             // 只在移动端启用
             if (window.innerWidth >= 768) return;
             
+            // 清理之前的观察器
+            if (currentVideoObserver) {
+                currentVideoObserver.disconnect();
+                currentVideoObserver = null;
+            }
+            videoObservers.forEach((cardData, card) => {
+                if (cardData.timeout) {
+                    clearTimeout(cardData.timeout);
+                }
+            });
+            videoObservers.clear();
+            pauseAllVideos();
+            
+            // 定义中心区域：视口中心40%的区域
+            const viewportHeight = window.innerHeight;
+            const centerMargin = viewportHeight * 0.3; // 上下各30%，中间40%为中心区域
             const observerOptions = {
                 root: null,
-                rootMargin: '0px',
-                threshold: 0.5 // 当项目50%进入视口时触发
+                rootMargin: `-${centerMargin}px 0px -${centerMargin}px 0px`, // 只检测中心区域
+                threshold: 0.5 // 当项目50%进入中心区域时触发
             };
             
             const observer = new IntersectionObserver((entries) => {
@@ -2160,20 +2194,64 @@
                     const card = entry.target;
                     const video = card.querySelector('.preview-video');
                     
+                    if (!video) return;
+                    
+                    // 获取或创建该卡片的观察数据
+                    let cardData = videoObservers.get(card);
+                    if (!cardData) {
+                        cardData = { timeout: null };
+                        videoObservers.set(card, cardData);
+                    }
+                    
                     if (entry.isIntersecting) {
-                        // 项目进入视口，添加in-viewport类并播放视频
+                        // 项目进入中心区域
                         card.classList.add('in-viewport');
-                        if (video) {
-                            video.play().catch(err => {
-                                console.log('Video play failed:', err);
-                            });
+                        
+                        // 清除之前的定时器
+                        if (cardData.timeout) {
+                            clearTimeout(cardData.timeout);
+                            cardData.timeout = null;
                         }
+                        
+                        // 设置1秒延迟播放
+                        cardData.timeout = setTimeout(() => {
+                            // 检查是否仍在中心区域（防止快速滚动）
+                            const rect = card.getBoundingClientRect();
+                            const viewportCenter = viewportHeight / 2;
+                            const cardCenter = rect.top + rect.height / 2;
+                            const distanceFromCenter = Math.abs(cardCenter - viewportCenter);
+                            const centerThreshold = viewportHeight * 0.2; // 中心20%范围内
+                            
+                            if (distanceFromCenter <= centerThreshold && entry.isIntersecting) {
+                                // 暂停所有其他视频
+                                pauseAllVideos();
+                                
+                                // 播放当前视频
+                                currentPlayingVideo = video;
+                                video.play().catch(err => {
+                                    console.log('Video play failed:', err);
+                                    currentPlayingVideo = null;
+                                });
+                            }
+                            
+                            cardData.timeout = null;
+                        }, 1000); // 1秒延迟
+                        
                     } else {
-                        // 项目离开视口，移除in-viewport类并暂停视频
+                        // 项目离开中心区域
                         card.classList.remove('in-viewport');
-                        if (video) {
+                        
+                        // 清除定时器
+                        if (cardData.timeout) {
+                            clearTimeout(cardData.timeout);
+                            cardData.timeout = null;
+                        }
+                        
+                        // 如果是当前播放的视频，暂停它
+                        if (video === currentPlayingVideo) {
                             video.pause();
                             video.currentTime = 0;
+                            currentPlayingVideo = null;
                         }
                     }
                 });
@@ -2182,8 +2260,15 @@
             // 观察所有有视频的项目卡片
             const cardsWithVideo = document.querySelectorAll('.project-card.has-video');
             cardsWithVideo.forEach(card => {
-                observer.observe(card);
+                const video = card.querySelector('.preview-video');
+                if (video) {
+                    observer.observe(card);
+                    videoObservers.set(card, { timeout: null });
+                }
             });
+            
+            // 保存 observer 引用以便后续清理
+            currentVideoObserver = observer;
         }
         
         // 在项目渲染后设置滚动监听
@@ -2202,6 +2287,28 @@
                 setupScrollVideoPlayback();
             }, 100);
         });
+        
+        // 快速滚动时取消所有待播放的定时器
+        let scrollTimeout = null;
+        window.addEventListener('scroll', () => {
+            // 如果正在快速滚动，取消所有待播放的定时器
+            if (scrollTimeout) {
+                clearTimeout(scrollTimeout);
+            }
+            
+            // 标记正在滚动
+            scrollTimeout = setTimeout(() => {
+                scrollTimeout = null;
+            }, 100);
+            
+            // 取消所有待播放的定时器
+            videoObservers.forEach((cardData, card) => {
+                if (cardData.timeout) {
+                    clearTimeout(cardData.timeout);
+                    cardData.timeout = null;
+                }
+            });
+        }, { passive: true });
 
         // 初始化渲染 - 默认显示All页面
         renderProjects('all');
