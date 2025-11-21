@@ -808,6 +808,19 @@
     </div>
 
     <script>
+        // 阿里云OSS基础URL配置
+        const OSS_BASE_URL = 'https://portfolio-fuwei.oss-cn-shanghai.aliyuncs.com/';
+        
+        // 资源路径处理函数：自动拼接OSS域名
+        function getResourceUrl(path) {
+            // 如果路径已经是完整URL（以http开头），直接返回
+            if (path && path.startsWith('http')) {
+                return path;
+            }
+            // 否则拼接OSS基础URL
+            return OSS_BASE_URL + path;
+        }
+        
         // 示例项目数据
         const projects = [
             {
@@ -1647,13 +1660,14 @@
                 // 封面图
                 let coverHTML;
                 if (project.cover) {
+                    const coverUrl = getResourceUrl(project.cover); // 使用OSS URL
                     if (isMobile) {
                         // 移动端：第一张图片eager加载，其他lazy加载
                         const loadingMode = index === 0 ? 'eager' : 'lazy';
-                        coverHTML = `<img src="${project.cover}" alt="${project.title}" class="cover-image" loading="${loadingMode}">`;
+                        coverHTML = `<img src="${coverUrl}" alt="${project.title}" class="cover-image" loading="${loadingMode}">`;
                     } else {
                         // 桌面端：保持原有逻辑
-                        coverHTML = `<img src="${project.cover}" alt="${project.title}" class="cover-image">`;
+                        coverHTML = `<img src="${coverUrl}" alt="${project.title}" class="cover-image">`;
                     }
                 } else {
                     coverHTML = '<div class="cover-image" style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>';
@@ -1663,10 +1677,11 @@
                 let previewVideoHTML = '';
                 if (project.video && project.video.src) {
                     if (project.video.type === 'video') {
+                        const videoUrl = getResourceUrl(project.video.src); // 使用OSS URL
                         // 移动端：preload="none" 不预加载，避免卡顿
                         // 桌面端：preload="metadata" 预加载元数据，支持hover播放
                         const preloadMode = isMobile ? 'none' : 'metadata';
-                        previewVideoHTML = `<video src="${project.video.src}" class="preview-video" loop muted playsinline preload="${preloadMode}"></video>`;
+                        previewVideoHTML = `<video src="${videoUrl}" class="preview-video" loop muted playsinline preload="${preloadMode}"></video>`;
                     } else if (project.video.type === 'youtube') {
                         // YouTube 不支持悬停预览，使用封面
                         previewVideoHTML = '';
@@ -1914,10 +1929,12 @@
             if (!media.src) {
                 mediaHTML = '<div class="media-placeholder">Project Media</div>';
             } else if (media.type === 'image') {
-                mediaHTML = `<img src="${media.src}" class="modal-image" alt="${currentProject.title}">`;
+                const imageUrl = getResourceUrl(media.src); // 使用OSS URL
+                mediaHTML = `<img src="${imageUrl}" class="modal-image" alt="${currentProject.title}">`;
             } else if (media.type === 'video') {
+                const videoUrl = getResourceUrl(media.src); // 使用OSS URL
                 // 本地视频 - 所有视频都自动播放并带声音
-                mediaHTML = `<video src="${media.src}" class="modal-video" controls autoplay></video>`;
+                mediaHTML = `<video src="${videoUrl}" class="modal-video" controls autoplay></video>`;
             } else if (media.type === 'youtube') {
                 // YouTube - 所有视频都自动播放
                 mediaHTML = `<iframe class="modal-video" src="https://www.youtube.com/embed/${media.src}?autoplay=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
