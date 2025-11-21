@@ -1767,9 +1767,15 @@
                 if (project.video && project.video.src) {
                     if (project.video.type === 'video') {
                         const videoUrl = getResourceUrl(project.video.src); // 使用OSS URL
-                        // 移动端：preload="none" 不预加载，避免卡顿
+                        // 移动端：第一个视频使用auto立即加载，其他视频使用none避免卡顿
                         // 桌面端：preload="metadata" 预加载元数据，支持hover播放
-                        const preloadMode = isMobile ? 'none' : 'metadata';
+                        let preloadMode;
+                        if (isMobile) {
+                            // 第一个视频（index === 0）使用auto立即加载，其他使用none
+                            preloadMode = index === 0 ? 'auto' : 'none';
+                        } else {
+                            preloadMode = 'metadata';
+                        }
                         previewVideoHTML = `<video src="${videoUrl}" class="preview-video" loop muted playsinline preload="${preloadMode}"></video>`;
                     } else if (project.video.type === 'youtube') {
                         // YouTube 不支持悬停预览，使用封面
@@ -2573,12 +2579,38 @@
                     }
                 }, 15000);
                 
-                // 先加载视频（如果preload="none"的话）
-                firstVideo.load();
-                firstVideo.play().catch(err => {
-                    console.log('第一个视频播放失败:', err);
-                    firstCard.classList.remove('video-loading');
-                });
+                // 如果preload="auto"，视频已经在加载，直接尝试播放
+                // 如果preload="none"，需要先调用load()
+                if (firstVideo.preload === 'none') {
+                    firstVideo.load();
+                }
+                
+                // 尝试立即播放（如果视频已经可以播放）
+                const tryPlay = () => {
+                    if (firstVideo.readyState >= 3) {
+                        // 视频已经有足够的数据可以播放
+                        firstVideo.play().catch(err => {
+                            console.log('第一个视频播放失败:', err);
+                            firstCard.classList.remove('video-loading');
+                        });
+                    } else {
+                        // 等待视频加载到可以播放的状态
+                        firstVideo.addEventListener('canplay', () => {
+                            firstVideo.play().catch(err => {
+                                console.log('第一个视频播放失败:', err);
+                                firstCard.classList.remove('video-loading');
+                            });
+                        }, { once: true });
+                    }
+                };
+                
+                // 如果视频已经加载了一些数据，立即尝试播放
+                if (firstVideo.readyState >= 2) {
+                    tryPlay();
+                } else {
+                    // 等待loadedmetadata事件，然后尝试播放
+                    firstVideo.addEventListener('loadedmetadata', tryPlay, { once: true });
+                }
             }
             
             // 检测视频是否大部分可见（70%以上）
