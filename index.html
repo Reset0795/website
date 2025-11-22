@@ -568,7 +568,9 @@
         }
 
         /* 响应式设计 */
-        @media (max-width: 768px) {
+        /* 移动端布局：<= 1024px（包括手机和平板） */
+        /* 桌面端布局：> 1024px */
+        @media (max-width: 1024px) {
             /* 顶部装饰文字 - 移动端居中显示 */
             .header-decoration {
                 position: fixed;
@@ -829,9 +831,11 @@
                 return path;
             }
             
-            // 严格检测是否为移动端（宽度 < 768px）
-            // 桌面端绝对不使用OSS，避免产生流量费用
-            const isMobile = window.innerWidth < 768;
+            // 检测是否为移动端（宽度 < 480px，真正的手机设备）
+            // iPad等平板设备（480px-1024px）使用移动端布局但使用本地文件，不使用OSS
+            // 桌面端（> 1024px）使用桌面端布局和本地文件，不使用OSS
+            // 只有 < 480px 的设备使用OSS，避免产生流量费用
+            const isMobile = window.innerWidth < 480;
             
             if (isMobile) {
                 // 移动端：使用阿里云OSS加速加载（仅限移动端）
@@ -1393,12 +1397,13 @@
         function setImageContainerHeight(imageContainer, aspectRatio) {
             if (!imageContainer) return;
             
-            // 检查是否是移动端
-            const isMobile = window.innerWidth < 768;
+            // 检查是否是移动端布局（宽度 <= 1024px）
+            // 移动端布局：不改变容器高度，保持固定的 padding-bottom，避免布局跳动
+            // 桌面端布局（> 1024px）：使用动态高度计算
+            const isMobileLayout = window.innerWidth <= 1024;
             
-            // 移动端：不改变容器高度，保持固定的 padding-bottom，避免布局跳动
-            // 内容通过 object-fit: contain 适应容器
-            if (isMobile) {
+            // 移动端布局：内容通过 object-fit: contain 适应容器
+            if (isMobileLayout) {
                 const coverImage = imageContainer.querySelector('img.cover-image');
                 const previewVideo = imageContainer.querySelector('video.preview-video');
                 
@@ -1509,8 +1514,20 @@
             isLayouting = true;
 
             const gridWidth = grid.offsetWidth;
-            // 移动端使用更小的间距
-            const gap = gridWidth < 768 ? 5 : 70;
+            // 如果 gridWidth 为 0 或无效，等待一下再重试
+            if (!gridWidth || gridWidth === 0) {
+                setTimeout(() => layoutMasonry(), 100);
+                isLayouting = false;
+                return;
+            }
+            
+            // 获取窗口宽度来判断布局模式
+            const windowWidth = window.innerWidth;
+            
+            // 移动端布局使用更小的间距（窗口宽度 <= 1024px）
+            // 桌面端布局（窗口宽度 > 1024px）使用更大的间距
+            // 但如果 gridWidth 太小（< 800px），使用较小的间距以适应小窗口
+            const gap = windowWidth <= 1024 ? 5 : (gridWidth < 800 ? 20 : 70);
             
             // 记录已放置项目的占用区域 [x, y, width, height]
             const placedItems = [];
@@ -1528,8 +1545,9 @@
                             card.classList.contains('size-tiny') ? 'tiny' :
                             card.classList.contains('size-mini') ? 'mini' : 'small';
                 
-                // 窗口小时单列排布（所有卡片屏幕宽度）
-                const isSmallWindow = gridWidth < 768;
+                // 移动端布局：单列排布（所有卡片屏幕宽度，窗口宽度 <= 1024px）
+                // 桌面端布局（窗口宽度 > 1024px）：瀑布流布局
+                const isSmallWindow = windowWidth <= 1024;
                 
                 // 移动端：直接使用flex布局，不需要复杂计算
                 if (isSmallWindow) {
@@ -1565,7 +1583,39 @@
                 }
                 
                 // 获取卡片实际高度
-                const cardHeight = card.offsetHeight || card.scrollHeight;
+                let cardHeight = card.offsetHeight || card.scrollHeight;
+                
+                // 如果高度无效，尝试使用图片/视频的宽高比计算临时高度
+                if (!cardHeight || cardHeight === 0) {
+                    const imageContainer = card.querySelector('.project-image');
+                    if (imageContainer) {
+                        // 尝试从 padding-bottom 获取宽高比
+                        const paddingBottom = window.getComputedStyle(imageContainer).paddingBottom;
+                        if (paddingBottom && paddingBottom.includes('%')) {
+                            const aspectRatio = parseFloat(paddingBottom) / 100;
+                            cardHeight = cardWidth / aspectRatio + 100; // 加上标题等高度
+                        } else {
+                            // 默认使用 4:3 比例
+                            cardHeight = cardWidth * 0.75 + 100;
+                        }
+                    } else {
+                        // 如果完全没有高度，使用默认值
+                        cardHeight = cardWidth * 0.75 + 100;
+                    }
+                }
+                
+                // 确保 cardWidth 不超过 gridWidth
+                if (cardWidth > gridWidth) {
+                    cardWidth = gridWidth;
+                }
+                
+                // 确保 cardWidth 和 cardHeight 都是有效值
+                if (!cardWidth || cardWidth <= 0 || !cardHeight || cardHeight <= 0) {
+                    console.warn('Invalid card dimensions:', { cardWidth, cardHeight, gridWidth, size });
+                    // 使用默认值而不是跳过
+                    cardWidth = Math.min(gridWidth, 300);
+                    cardHeight = cardWidth * 0.75 + 100;
+                }
                 
                 // 找到可以放置该卡片的最佳位置
                 let bestX = 0;
@@ -1712,20 +1762,22 @@
                 : projects.filter(p => p.category === category);
             
             grid.innerHTML = filteredProjects.map((project, index) => {
-                // 检测是否移动端
-                const isMobile = window.innerWidth < 768;
+                // 布局判断：<= 1024px 使用移动端布局，> 1024px 使用桌面端布局
+                const isMobileLayout = window.innerWidth <= 1024;
+                // OSS使用判断：< 480px 使用OSS，>= 480px 使用本地文件
+                const isMobileOSS = window.innerWidth < 480;
                 
                 // 封面图
                 let coverHTML;
                 if (project.cover) {
-                    // getResourceUrl: 移动端返回OSS URL，桌面端返回本地路径（不使用OSS）
+                    // getResourceUrl: < 480px 返回OSS URL，>= 480px 返回本地路径（不使用OSS）
                     const coverUrl = getResourceUrl(project.cover);
-                    if (isMobile) {
-                        // 移动端：第一张图片eager加载，其他lazy加载
+                    if (isMobileLayout) {
+                        // 移动端布局（<= 1024px）：第一张图片eager加载，其他lazy加载
                         const loadingMode = index === 0 ? 'eager' : 'lazy';
                         coverHTML = `<img src="${coverUrl}" alt="${project.title}" class="cover-image" loading="${loadingMode}">`;
                     } else {
-                        // 桌面端：使用本地文件，不使用OSS
+                        // 桌面端布局（> 1024px）：使用本地文件，不使用OSS
                         coverHTML = `<img src="${coverUrl}" alt="${project.title}" class="cover-image">`;
                     }
                 } else {
@@ -1736,11 +1788,11 @@
                 let previewVideoHTML = '';
                 if (project.video && project.video.src) {
                     if (project.video.type === 'video') {
-                        // getResourceUrl: 移动端返回OSS URL，桌面端返回本地路径（不使用OSS）
+                        // getResourceUrl: < 480px 返回OSS URL，>= 480px 返回本地路径（不使用OSS）
                         const videoUrl = getResourceUrl(project.video.src);
-                        // 移动端：preload="none" 不预加载，避免卡顿和流量消耗
-                        // 桌面端：preload="metadata" 预加载元数据，支持hover播放（使用本地文件，不消耗OSS流量）
-                        const preloadMode = isMobile ? 'none' : 'metadata';
+                        // 移动端布局（<= 1024px）：preload="none" 不预加载，避免卡顿和流量消耗
+                        // 桌面端布局（> 1024px）：preload="metadata" 预加载元数据，支持hover播放
+                        const preloadMode = isMobileLayout ? 'none' : 'metadata';
                         previewVideoHTML = `<video src="${videoUrl}" class="preview-video" loop muted playsinline preload="${preloadMode}"></video>`;
                     } else if (project.video.type === 'youtube') {
                         // YouTube 不支持悬停预览，使用封面
@@ -1758,9 +1810,9 @@
                 const hasVideo = project.video && project.video.src && project.video.type === 'video';
                 const videoClass = hasVideo ? 'has-video' : '';
                 
-                // 移动端：根据 orientation 参数添加视频方向类
+                // 移动端布局：根据 orientation 参数添加视频方向类
                 let orientationClass = '';
-                if (isMobile && hasVideo && project.orientation) {
+                if (isMobileLayout && hasVideo && project.orientation) {
                     if (project.orientation === 'landscape') {
                         orientationClass = 'video-landscape';  // 横版 4:3
                     } else if (project.orientation === 'portrait') {
@@ -2237,17 +2289,49 @@
         let lastWindowHeight = window.innerHeight;
         let wasFullscreen = isFullscreen();
 
+        // 检测是否为移动端（真正的手机设备，不包括iPad等平板）
+        function isMobileDevice() {
+            // 宽度 < 480px 认为是移动端
+            if (window.innerWidth < 480) return true;
+            
+            // 通过User Agent检测，但排除iPad
+            const ua = navigator.userAgent.toLowerCase();
+            const isIPad = /ipad/.test(ua);
+            if (isIPad) return false; // iPad使用桌面端布局
+            
+            // 其他移动设备
+            return /android|webos|iphone|ipod|blackberry|iemobile|opera mini/i.test(ua);
+        }
+
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
                 const currentFullscreen = isFullscreen();
                 const widthChanged = Math.abs(window.innerWidth - lastWindowWidth) > 50;
-                const heightChanged = Math.abs(window.innerHeight - lastWindowHeight) > 50;
+                // 移动端：忽略高度变化（地址栏显示/隐藏会导致高度变化，但不应该刷新）
+                // 桌面端：高度变化超过50px才刷新
+                const heightChanged = isMobileDevice() 
+                    ? false  // 移动端忽略高度变化
+                    : Math.abs(window.innerHeight - lastWindowHeight) > 50;
                 
-                // 如果全屏状态改变或窗口大小显著改变，刷新页面
-                if (wasFullscreen !== currentFullscreen || widthChanged || heightChanged) {
-                    window.location.reload();
-                    return;
+                const isMobile = isMobileDevice();
+                const fullscreenChanged = wasFullscreen !== currentFullscreen;
+                
+                // 判断是否需要刷新页面
+                // 移动端：只在全屏状态改变或宽度显著改变时刷新（忽略高度变化）
+                // 桌面端：全屏状态改变、宽度或高度显著改变时刷新
+                const shouldReload = fullscreenChanged || widthChanged || heightChanged;
+                
+                if (shouldReload) {
+                    // 移动端：如果只是高度变化（地址栏显示/隐藏），不刷新，只重新布局
+                    if (isMobile && !fullscreenChanged && !widthChanged) {
+                        // 移动端高度变化，只重新布局，不刷新
+                        // 继续执行下面的布局代码
+                    } else {
+                        // 其他情况：刷新页面
+                        window.location.reload();
+                        return;
+                    }
                 }
                 
                 // 否则重新计算布局
@@ -2296,24 +2380,24 @@
             }, 250);
         });
 
-        // 监听全屏状态变化
+        // 监听全屏状态变化（移动端不刷新，避免干扰视频播放）
         document.addEventListener('fullscreenchange', () => {
-            if (isFullscreen() !== wasFullscreen) {
+            if (isFullscreen() !== wasFullscreen && !isMobileDevice()) {
                 setTimeout(() => window.location.reload(), 100);
             }
         });
         document.addEventListener('webkitfullscreenchange', () => {
-            if (isFullscreen() !== wasFullscreen) {
+            if (isFullscreen() !== wasFullscreen && !isMobileDevice()) {
                 setTimeout(() => window.location.reload(), 100);
             }
         });
         document.addEventListener('mozfullscreenchange', () => {
-            if (isFullscreen() !== wasFullscreen) {
+            if (isFullscreen() !== wasFullscreen && !isMobileDevice()) {
                 setTimeout(() => window.location.reload(), 100);
             }
         });
         document.addEventListener('MSFullscreenChange', () => {
-            if (isFullscreen() !== wasFullscreen) {
+            if (isFullscreen() !== wasFullscreen && !isMobileDevice()) {
                 setTimeout(() => window.location.reload(), 100);
             }
         });
@@ -2338,8 +2422,9 @@
         
         // 后台加载接下来的3张图片
         function loadNextImages() {
-            // 只在移动端执行
-            if (window.innerWidth >= 768) return;
+            // 只在移动端布局执行（宽度 <= 1024px）
+            // 桌面端布局（> 1024px）使用桌面端逻辑
+            if (window.innerWidth > 1024) return;
             
             const imagesToLoad = 3;
             let loadedCount = 0;
@@ -2385,8 +2470,9 @@
         }
         
         function setupMobileVideoPlayback() {
-            // 只在移动端启用
-            if (window.innerWidth >= 768) return;
+            // 只在移动端布局启用（宽度 <= 1024px）
+            // 桌面端布局（> 1024px）使用桌面端逻辑
+            if (window.innerWidth > 1024) return;
             
             // 清理之前的观察器
             if (videoObserver) {
